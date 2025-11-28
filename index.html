@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming Soon</title>
+    <style>
+        body {
+            background-color: black;
+            color: limegreen;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            padding-top: 5%;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .ascii-art {
+            font-size: 14px;
+            white-space: pre;
+            display: block;
+            margin: 20px auto;
+            line-height: 1.2;
+        }
+
+        .gif-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        p {
+            font-size: 1.5em;
+        }
+
+        /* Button Styling */
+        .button-container {
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: black;
+            color: limegreen;
+            border: 2px solid limegreen;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: limegreen;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>To be coded soon!</h1>
+
+    <div class="ascii-art">
+        <pre>
+(◕_◕)  (◕_◕)  (◕_◕)  (◕_◕)  (◕_◕)
+(='.'=) (='.'=) (='.'=) (='.'=) (='.'=)
+(")_(") (")_(") (")_(") (")_(") (")_(")
+        </pre>
+    </div>
+
+    <div class="button-container">
+        <button onclick="playMusic()">▶ Play Music</button>
+        <button onclick="stopMusic()">■ Stop Music</button>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="Antoine Villoutreix - Berlin.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div class="gif-container">
+        <img src="yaiko2.gif" alt="Loading..." width="200">
+    </div>
+
+    <div class="ascii-art">
+        <pre>
+"The answer to life, the universe, and everything is 42?"
+          
+  444444444   222222222222222    
+ 4::::::::4  2:::::::::::::::22  
+4:::::::::4  2::::::222222:::::2 
+4::::44::::4 2222222     2:::::2 
+4::::4 4::::4            2:::::2 
+4::::4  4::::4           2:::::2 
+4::::4   4::::4       2222::::2  
+4::::444444::::444    2::::::2   
+ 4::::::::::::::::4    2:::::2   
+  4444444444:::::444   2:::::2   
+            4::::4     2:::::2   
+            4::::4     2:::::2   
+          44::::::44 2222::::2   
+          4::::::::4 2::::::2    
+         4::::::::4  2::::::2    
+        4444444444   22222222    
+        </pre>
+    </div>
+
+
+    <a href="/deepdive/">go for deepdive</a>
+
+    <script>
+        const music = document.getElementById('bg-music');
+
+        function playMusic() {
+            music.play();
+        }
+
+        function stopMusic() {
+            music.pause();
+            music.currentTime = 0;  // Reset the music to the start
+        }
+    </script>
+</body>
+
+</html>

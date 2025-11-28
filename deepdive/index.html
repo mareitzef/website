@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Dive</title>
+    <style>
+        body {
+            background-color: black;
+            color: cyan;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            padding-top: 5%;
+        }
+
+        h1 {
+            font-size: 3em;
+        }
+
+        /* Button Styling */
+        .button-container {
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: black;
+            color: limegreen;
+            border: 2px solid limegreen;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: limegreen;
+            color: black;
+        }
+
+        /* Terminal Styling */
+        .terminal {
+            width: 20%;
+            height: 100px;
+            margin: 40px auto;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid limegreen;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+            background-color: black;
+            color: limegreen;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .line {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            animation: moveUp 6s linear infinite;
+            /* Extended animation time and infinite repeat */
+            white-space: nowrap;
+            color: limegreen;
+            line-height: 40px;
+        }
+
+        @keyframes moveUp {
+            0% {
+                transform: translateY(100%);
+                /* Start from the bottom of the terminal */
+            }
+
+            100% {
+                transform: translateY(-200%);
+                /* Move to the top and beyond */
+            }
+        }
+
+        .ascii-art {
+            margin-top: 30px;
+            text-align: left;
+            /* Align the text to the left */
+            display: inline-block;
+            /* Prevents block behavior */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Welcome to the Deep Dive</h1>
+    <p>This is where things get really not interesting...</p>
+
+    <div class="button-container">
+        <button onclick="playMusic()">▶ Play Music</button>
+        <button onclick="stopMusic()">■ Stop Music</button>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="../02 - Hilight Tribe - Tsunami.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div class="ascii-art">
+        <pre>
+
+                                    /
+                         __       //
+                         -\= \=\ //
+                       --=_\=---//=--
+                     -_==/  \/ //\/--
+                      ==/   /O   O\==--
+         _ _ _ _     /_/    \  ]  /--
+        /\ ( (- \    /       ] ] ]==-
+       (\ _\_\_\-\__/     \  (,_,)--
+      (\_/                 \     \-
+      \/      /       (   ( \  ] /)
+      /      (         \   \_ \./ )
+      (       \         \      )  \
+      (       /\_ _ _ _ /---/ /\_  \
+       \     / \     / ____/ /   \  \
+        (   /   )   / /  /__ )   (  )
+        (  )   / __/ '---`       / /
+        \  /   \ \             _/ /
+        ] ]     )_\_         /__\/
+        /_\     ]___\
+       (___)
+
+
+        </pre>
+    </div>
+
+    <!-- Terminal Animation Section -->
+    <div class="terminal">
+        <div class="line"># Hack initiated...</div>
+        <div class="line" style="animation-delay: 1s;"># Scanning network...</div>
+        <div class="line" style="animation-delay: 2s;"># Connection established.</div>
+        <div class="line" style="animation-delay: 3s;"># Accessing remote system...</div>
+        <div class="line" style="animation-delay: 4s;"># Retrieving files...</div>
+        <div class="line" style="animation-delay: 5s;"># Decrypting data...</div>
+        <div class="line" style="animation-delay: 6s;"># Hack successful. Sending data...</div>
+    </div>
+
+    <a href="/">Back to Home</a>
+
+    <script>
+        const music = document.getElementById('bg-music');
+
+        function playMusic() {
+            music.play().catch(error => console.error("Autoplay blocked:", error));
+        }
+
+        function stopMusic() {
+            music.pause();
+            music.currentTime = 0;
+        }
+
+        // JavaScript to add more lines dynamically
+        let terminal = document.querySelector('.terminal');
+        let commands = [
+            "# Hack initiated...",
+            "# Scanning network...",
+            "# Connection established.",
+            "# Accessing remote system...",
+            "# Retrieving files...",
+            "# Decrypting data...",
+            "# Hack successful. Sending data..."
+        ];
+
+        let index = 7;
+        setInterval(() => {
+            let newLine = document.createElement('div');
+            newLine.classList.add('line');
+            newLine.style.animationDelay = `${index * 7}s`;
+            newLine.textContent = `# Command #${index} executed.`;
+            terminal.appendChild(newLine);
+
+            index++;
+        }, 1000);
+    </script>
+</body>
+
+</html>
