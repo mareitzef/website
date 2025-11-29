@@ -72,12 +72,11 @@ def predict():
                 500,
             )
 
-        # Look for the generated HTML file
-        # Pattern: Meteostat_and_openweathermap_since_{date}_{lat}_{lon}_test.html
-        expected_filename = f"Meteostat_and_openweathermap_since_{start_date}_{latitude}_{longitude}_test.html"
+        # Look for the plots-only HTML file
+        plots_filename = "Meteostat_and_openweathermap_plots_only.html"
 
-        if os.path.exists(expected_filename):
-            with open(expected_filename, "r", encoding="utf-8") as f:
+        if os.path.exists(plots_filename):
+            with open(plots_filename, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
             # Extract just the plot divs from the generated HTML
@@ -96,7 +95,7 @@ def predict():
                 plot_content = html_content
 
             return jsonify(
-                {"success": True, "html": plot_content, "filename": expected_filename}
+                {"success": True, "html": plot_content, "filename": plots_filename}
             )
         else:
             # List files to help debug
@@ -105,7 +104,7 @@ def predict():
                 jsonify(
                     {
                         "error": "Output file not found",
-                        "expected": expected_filename,
+                        "expected": plots_filename,
                         "available_files": files,
                         "stdout": result.stdout,
                         "stderr": result.stderr,

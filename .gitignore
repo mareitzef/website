@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .DS_Store
 *test.html
+predictions/Meteostat_and_openweathermap_plots_only.html
