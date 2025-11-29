@@ -94,11 +94,17 @@
                     throw new Error('Could not load plots file');
                 }
 
-                const html = await response.text();
+                let html = await response.text();
+
+                // Remove any duplicate Plotly includes or script tags that might cause issues
+                html = html.replace(/<script[^>]*src=[^>]*plotly[^>]*><\/script>/gi, '');
+                html = html.replace(/<script[^>]*>window\.PlotlyConfig[^<]*<\/script>/gi, '');
+
                 output.innerHTML = html;
 
             } catch (error) {
-                errorDiv.textContent = 'Error: ' + error.message;
+                console.error('Load error:', error);
+                errorDiv.textContent = 'Error loading plots: ' + error.message + '. Make sure Meteostat_and_openweathermap_plots_only.html exists in the same directory.';
                 errorDiv.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
