@@ -30,9 +30,10 @@ def get_plots():
         else:
             return jsonify({"error": "Plots file not found"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500 @ app.route("/predict", methods=["POST"])
+        return jsonify({"error": str(e)}), 500
 
 
+@app.route("/predict", methods=["POST"])
 def predict():
     try:
         # Get form data

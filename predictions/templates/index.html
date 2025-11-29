@@ -267,9 +267,9 @@
         const resultContainer = document.getElementById('resultContainer');
         const outputFrame = document.getElementById('outputFrame');
 
-        // Load the plots file on page load
+        // Load the static plots file on page load
         window.addEventListener('DOMContentLoaded', () => {
-            loadPlotsFile();
+            loadStaticPlots();
         });
 
         form.addEventListener('submit', async (e) => {
@@ -289,7 +289,7 @@
             loadPrediction(formData);
         });
 
-        async function loadPlotsFile() {
+        async function loadStaticPlots() {
             // Hide previous results and errors
             errorDiv.classList.remove('active');
 
@@ -298,6 +298,38 @@
 
             try {
                 const response = await fetch('/plots');
+
+                if (!response.ok) {
+                    throw new Error('Failed to load plots file');
+                }
+
+                const html_content = await response.text();
+
+                // Extract body content if it exists
+                const bodyMatch = html_content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                const plot_content = bodyMatch ? bodyMatch[1] : html_content;
+
+                // Display the result
+                outputFrame.innerHTML = plot_content;
+                resultContainer.classList.add('active');
+
+            } catch (error) {
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.classList.add('active');
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        async function loadPlotsFile() {
+            // Hide previous results and errors
+            errorDiv.classList.remove('active');
+
+            // Show loading
+            loading.classList.add('active');
+
+            try {
+                const response = await fetch('../Meteostat_and_openweathermap_plots_only.html');
 
                 if (!response.ok) {
                     throw new Error('Failed to load plots file');
@@ -358,8 +390,8 @@
         function resetForm() {
             form.reset();
             errorDiv.classList.remove('active');
-            // Reload default plot
-            loadPlotsFile();
+            // Reload static plots
+            loadStaticPlots();
         }
     </script>
 </body>
