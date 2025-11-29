@@ -30,6 +30,71 @@
             margin-bottom: 30px;
         }
 
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
         #loading {
             display: none;
             text-align: center;
@@ -65,6 +130,31 @@
     <div class="container">
         <h1>⛅ Weather Prediction</h1>
 
+        <!-- Form Section -->
+        <div class="form-section">
+            <form id="weatherForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location_name">Location Name</label>
+                        <input type="text" id="location_name" placeholder="e.g., Freiburg">
+                    </div>
+                    <div class="form-group">
+                        <label for="latitude">Latitude</label>
+                        <input type="number" id="latitude" step="0.0001" placeholder="47.99305">
+                    </div>
+                    <div class="form-group">
+                        <label for="longitude">Longitude</label>
+                        <input type="number" id="longitude" step="0.0001" placeholder="7.84068">
+                    </div>
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date">
+                    </div>
+                </div>
+                <button type="submit">Generate Prediction</button>
+            </form>
+        </div>
+
         <div id="loading">Loading plots...</div>
         <div id="error"></div>
 
@@ -76,49 +166,92 @@
         const output = document.getElementById('output');
         const loading = document.getElementById('loading');
         const errorDiv = document.getElementById('error');
+        const form = document.getElementById('weatherForm');
 
-        // Load plots when page loads
+        // Load default plots when page loads
         window.addEventListener('load', () => {
             loadPlots();
         });
 
-        async function loadPlots() {
+        // Handle form submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const formData = {};
+
+            const lat = document.getElementById('latitude').value;
+            const lon = document.getElementById('longitude').value;
+            const date = document.getElementById('start_date').value;
+
+            if (lat) formData.latitude = parseFloat(lat);
+            if (lon) formData.longitude = parseFloat(lon);
+            if (date) formData.start_date = date;
+
+            loadPlots(formData);
+        });
+
+        async function loadPlots(formData = {}) {
             loading.style.display = 'block';
             errorDiv.style.display = 'none';
+            output.innerHTML = '';
 
             try {
-                // Load the plots file directly
-                const response = await fetch('Meteostat_and_openweathermap_plots_only.html?t=' + Date.now());
+                // If no form data, load initial plots
+                if (Object.keys(formData).length === 0) {
+                    const response = await fetch('initial-plots?t=' + Date.now());
 
-                if (!response.ok) {
-                    throw new Error('Could not load plots file');
-                }
-
-                let html = await response.text();
-
-                // Insert the HTML (which contains both divs and script tags)
-                output.innerHTML = html;
-
-                // Execute any script tags that were inserted
-                const scripts = output.querySelectorAll('script');
-                scripts.forEach(script => {
-                    const newScript = document.createElement('script');
-                    newScript.type = 'text/javascript';
-                    if (script.src) {
-                        newScript.src = script.src;
-                    } else {
-                        newScript.textContent = script.textContent;
+                    if (!response.ok) {
+                        throw new Error('Could not load initial plots');
                     }
-                    document.body.appendChild(newScript);
-                });
+
+                    let html = await response.text();
+                    output.innerHTML = html;
+
+                    // Execute any script tags
+                    executeScripts(output);
+                } else {
+                    // Generate new prediction
+                    const response = await fetch('predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Prediction failed');
+                    }
+
+                    output.innerHTML = data.html;
+
+                    // Execute any script tags
+                    executeScripts(output);
+                }
 
             } catch (error) {
                 console.error('Load error:', error);
-                errorDiv.textContent = 'Error loading plots: ' + error.message + '. Check browser console for details.';
+                errorDiv.textContent = 'Error: ' + error.message;
                 errorDiv.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
             }
+        }
+
+        function executeScripts(container) {
+            const scripts = container.querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                newScript.type = 'text/javascript';
+                if (script.src) {
+                    newScript.src = script.src;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                document.body.appendChild(newScript);
+            });
         }
     </script>
 </body>
