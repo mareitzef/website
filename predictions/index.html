@@ -4,7 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Weather Prediction Tool</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Load Plotly ONLY once, globally -->
+    <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+
     <style>
         body {
             font-family: sans-serif;
@@ -28,7 +31,7 @@
 
     <h2>Weather Prediction Tool</h2>
 
-    <!-- ONLY ONE INPUT SECTION -->
+    <!-- SINGLE INPUT SECTION -->
     <form id="weatherForm">
         <label>Latitude: <input type="number" id="latitude" step="0.0001"></label><br>
         <label>Longitude: <input type="number" id="longitude" step="0.0001"></label><br>
@@ -48,18 +51,24 @@
         const loading = document.getElementById("loading");
         const errorDiv = document.getElementById("error");
 
-        // Load initial static plots on page load (always reloaded)
-        window.onload = () => loadInitialPlots();
+        // Load initial static plots when the page loads
+        window.addEventListener("load", () => loadInitialPlots());
 
         async function loadInitialPlots() {
             loading.style.display = "block";
             errorDiv.style.display = "none";
 
             try {
-                // prevent browser cache: add timestamp
-                const r = await fetch("/predictions/initial-plots?t=" + Date.now());
+                // IMPORTANT: relative path (works inside /predictions/)
+                const r = await fetch("./initial-plots?t=" + Date.now());
+
                 if (!r.ok) throw new Error("Could not load initial plots");
-                output.innerHTML = await r.text();
+
+                const html = await r.text();
+
+                // Make sure Plotly JS inside plots is removed (avoid duplicates)
+                output.innerHTML = stripPlotlyIncludes(html);
+
             } catch (err) {
                 errorDiv.textContent = err.message;
                 errorDiv.style.display = "block";
@@ -68,8 +77,13 @@
             }
         }
 
-        // Handle prediction
-        document.getElementById("weatherForm").onsubmit = async (e) => {
+        // Remove duplicate script imports if backend accidentally includes them
+        function stripPlotlyIncludes(html) {
+            return html.replace(/<script[^>]*plotly[^>]*><\/script>/gi, "");
+        }
+
+        // Handle Generate (predictions)
+        document.getElementById("weatherForm").addEventListener("submit", async (e) => {
             e.preventDefault();
 
             loading.style.display = "block";
@@ -81,20 +95,21 @@
             if (start_date.value) body.start_date = start_date.value;
 
             try {
-                const r = await fetch("/predictions/predict", {
+                const r = await fetch("./predict", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(body)
                 });
 
-                const type = r.headers.get("content-type");
+                const contentType = r.headers.get("content-type") || "";
 
-                if (type.includes("application/json")) {
+                if (contentType.includes("application/json")) {
                     const data = await r.json();
                     if (!r.ok) throw new Error(data.error || "Prediction failed");
-                    output.innerHTML = data.html;
+
+                    output.innerHTML = stripPlotlyIncludes(data.html);
                 } else {
-                    output.innerHTML = await r.text();
+                    output.innerHTML = stripPlotlyIncludes(await r.text());
                 }
 
             } catch (err) {
@@ -103,7 +118,7 @@
             } finally {
                 loading.style.display = "none";
             }
-        };
+        });
     </script>
 
 </body>
