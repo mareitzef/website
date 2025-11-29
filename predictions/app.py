@@ -11,8 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
-CORS(app)
+CORS(app)  # Enable CORS for all routes
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PLOT_FILE = os.path.join(BASE_DIR, "Meteostat_and_openweathermap_plots_only.html")
