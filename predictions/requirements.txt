@@ -1,9 +1,15 @@
-Flask==2.0.3
-flask-cors==3.0.10
-Werkzeug==2.0.3
-# Add any other dependencies your weather script needs
-# For example:
-# pandas
-# numpy
-# plotly
-# matplotlib
+Flask==3.0.0
+flask-cors==4.0.0
+Werkzeug==3.0.6
+
+# Weather script dependencies
+pandas
+meteostat
+plotly
+requests
+windpowerlib
+jinja2
+numpy
+
+# Compatibility for old OpenSSL
+urllib3<2

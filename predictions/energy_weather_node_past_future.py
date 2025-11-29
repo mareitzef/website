@@ -254,7 +254,7 @@ def main():
         lon = "7.70911552"
 
         api_key = "6545b0638b99383c1a278d3962506f4b"
-        first_date = datetime.strptime("2023-07-24", "%Y-%m-%d")
+        first_date = datetime.strptime("2025-11-11", "%Y-%m-%d")
 
     # get weather data from OpenWeatherMap API
     (
@@ -561,7 +561,7 @@ def main():
 
     # Load the HTML template
     env = Environment(loader=FileSystemLoader("."))
-    template = env.get_template("template.html")
+    template = env.get_template("templates/template.html")
 
     # Render the template with the plots' HTML
     html_output = template.render(plot1=plot1_html, plot2=plot2_html)
@@ -577,11 +577,11 @@ def main():
         + ".html"
     )
 
-    with open(
-        filename,
-        "w",
-    ) as f:
-        f.write(html_output)
+    # with open(
+    #     filename,
+    #     "w",
+    # ) as f:
+    #     f.write(html_output)
 
     webbrowser.open_new_tab(filename)
 
