@@ -37,20 +37,15 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 def save_plots(fig1, fig2):
-    # Generate ONLY plot div, NO plotly.js, NO html/head/body
     plot1_html = fig1.to_html(full_html=False, include_plotlyjs=False, div_id="plot1")
     plot2_html = fig2.to_html(full_html=False, include_plotlyjs=False, div_id="plot2")
-
-    # Wrap both plots in a container
     plots_only = f"""<div class="plots-container">
     {plot1_html}
     {plot2_html}
 </div>"""
-
     filename = "Meteostat_and_openweathermap_plots_only.html"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(plots_only)
-
     print(f"Saved plots to {filename}")
 
 
