@@ -41,38 +41,29 @@ def predict():
         latitude = data.get("latitude", "47.9161926")
         longitude = data.get("longitude", "7.70911552")
         start_date = data.get("start_date", "")
-        # api_key = data.get("api_key", "")  # Optional API key
-
-        # Validate inputs
 
         # Path to your weather prediction script
-        script_path = "energy_weather_node_past_future.py"
+        script_path = os.path.join(
+            os.path.dirname(__file__), "energy_weather_node_past_future.py"
+        )
+        work_dir = os.path.dirname(__file__)
 
         # Build command with arguments
-        cmd = [
-            "python",
-            script_path,
-        ]
+        cmd = ["python", script_path]
+
         if start_date:
             cmd.extend(["--start_date", start_date])
-
-        # Add API key if provided
-        # if api_key:
-        #     cmd.extend(["--api_key", api_key])
-
-        # if not all([latitude, longitude]):
-        #         return jsonify({"error": "Missing required fields"}), 400
 
         if latitude and longitude:
             cmd.extend(["--latitude", str(latitude), "--longitude", str(longitude)])
 
-        # Run the script
+        # Run the script in the correct directory
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
-            cwd=os.path.dirname(os.path.abspath(__file__)),
+            cwd=work_dir,
         )
 
         if result.returncode != 0:
@@ -82,45 +73,35 @@ def predict():
                         "error": "Script execution failed",
                         "details": result.stderr,
                         "output": result.stdout,
+                        "command": " ".join(cmd),
                     }
                 ),
                 500,
             )
 
-        # Look for the plots-only HTML file
-        plots_filename = "Meteostat_and_openweathermap_plots_only.html"
+        # Look for the plots-only HTML file in the working directory
+        plots_filename = os.path.join(
+            work_dir, "Meteostat_and_openweathermap_plots_only.html"
+        )
 
         if os.path.exists(plots_filename):
             with open(plots_filename, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
-            # Extract just the plot divs from the generated HTML
-            # We'll embed these into our page instead of the full HTML
-            import re
-
-            # Try to extract the body content or the plots
-            # This depends on your template structure
-            body_match = re.search(
-                r"<body[^>]*>(.*?)</body>", html_content, re.DOTALL | re.IGNORECASE
-            )
-            if body_match:
-                plot_content = body_match.group(1)
-            else:
-                # If no body tag, use the whole content
-                plot_content = html_content
-
+            # Return the plots directly (already just divs, no body tags)
             return jsonify(
-                {"success": True, "html": plot_content, "filename": plots_filename}
+                {"success": True, "html": html_content, "filename": plots_filename}
             )
         else:
             # List files to help debug
-            files = [f for f in os.listdir(".") if f.endswith(".html")]
+            files = [f for f in os.listdir(work_dir) if f.endswith(".html")]
             return (
                 jsonify(
                     {
                         "error": "Output file not found",
                         "expected": plots_filename,
                         "available_files": files,
+                        "work_dir": work_dir,
                         "stdout": result.stdout,
                         "stderr": result.stderr,
                     }
