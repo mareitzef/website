@@ -574,14 +574,14 @@ def main():
         + str(lat)
         + "_"
         + str(lon)
-        + ".html"
+        + "_test.html"
     )
 
-    # with open(
-    #     filename,
-    #     "w",
-    # ) as f:
-    #     f.write(html_output)
+    with open(
+        filename,
+        "w",
+    ) as f:
+        f.write(html_output)
 
     webbrowser.open_new_tab(filename)
 
