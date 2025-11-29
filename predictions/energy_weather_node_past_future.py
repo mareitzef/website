@@ -442,6 +442,12 @@ def main():
     )
     fig.update_yaxes(title_text="Power (kW)", row=3, col=1, secondary_y=True)
     fig.update_layout(title="Historic Data - Meteostat - " + location, height=600)
+    # put background color to black in terminal style
+    fig.update_layout(
+        plot_bgcolor="black",
+        paper_bgcolor="black",
+        font=dict(color="white"),
+    )
 
     #################### Create seocond plot with forecast data from OpenWeatherMap ############################
 
@@ -566,6 +572,11 @@ def main():
     )
     fig2.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
     fig2.update_yaxes(title_text="Power (kW)", row=3, col=1, secondary_y=True)
+    fig2.update_layout(
+        plot_bgcolor="black",
+        paper_bgcolor="black",
+        font=dict(color="white"),
+    )
 
     save_plots(fig, fig2)
 
