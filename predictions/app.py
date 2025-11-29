@@ -3,9 +3,14 @@ from flask_cors import CORS
 import subprocess
 import os
 import json
+import sys
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+# Ensure Python 3.6 compatibility
+if sys.version_info < (3, 7):
+    print("Running on Python 3.6 - some features may be limited")
 
 
 @app.route("/")
@@ -27,7 +32,7 @@ def predict():
             return jsonify({"error": "Missing required fields"}), 400
 
         # Path to your weather prediction script
-        script_path = "your_weather_script.py"  # Update this path
+        script_path = "/home/zef/html/predictions/energy_weather_node_past_future.py.py"  # Update this path
 
         # Run your Python script with the provided parameters
         # Adjust the command based on how your script accepts arguments
@@ -54,7 +59,7 @@ def predict():
 
         # Assuming your script outputs HTML graph
         # Read the generated HTML file
-        output_file = "output.html"  # Update based on your script's output
+        output_file = "/home/zef/html/predictions/output.html"  # Update based on your script's output
         if os.path.exists(output_file):
             with open(output_file, "r", encoding="utf-8") as f:
                 html_content = f.read()
