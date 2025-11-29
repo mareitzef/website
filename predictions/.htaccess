@@ -1,0 +1,12 @@
+<IfModule mod_wsgi.c>
+    WSGIScriptAlias / /home/zef/html/predictions/predictions.wsgi
+    WSGIDaemonProcess predictions python-home=/home/zef/html/predictions/venv
+    WSGIProcessGroup predictions
+    WSGIApplicationGroup %{GLOBAL}
+</IfModule>
+
+<IfModule !mod_wsgi.c>
+    # Fallback: Redirect to Python via CGI if mod_wsgi is not available
+    AddType application/x-httpd-python .py
+    AddHandler cgi-script .py
+</IfModule>

@@ -27,9 +27,23 @@ if sys.version_info < (3, 7):
 def index():
     logger.info("GET / - Serving index.html")
     try:
-        content = open("index.html", "r", encoding="utf-8").read()
-        logger.info(f"Successfully loaded index.html ({len(content)} bytes)")
-        return content
+        # Try multiple paths for index.html
+        index_paths = [
+            "index.html",
+            os.path.join(os.path.dirname(__file__), "index.html"),
+            "/var/www/virtual/zef/html/predictions/index.html",
+        ]
+
+        for path in index_paths:
+            if os.path.exists(path):
+                content = open(path, "r", encoding="utf-8").read()
+                logger.info(
+                    f"Successfully loaded index.html from {path} ({len(content)} bytes)"
+                )
+                return content
+
+        logger.error(f"index.html not found in any of: {index_paths}")
+        return jsonify({"error": "index.html not found"}), 404
     except Exception as e:
         logger.error(f"Error loading index.html: {e}")
         return jsonify({"error": str(e)}), 500
@@ -50,20 +64,37 @@ def get_plots():
                 html_content = f.read()
             logger.info(f"Loaded {len(html_content)} bytes from {plots_file}")
             return html_content
-        else:
-            logger.warning(f"File not found: {plots_file}")
-            available_files = [f for f in os.listdir(".") if f.endswith(".html")]
-            logger.info(f"Available HTML files: {available_files}")
-            return (
-                jsonify(
-                    {
-                        "error": f"Plots file not found",
-                        "available": available_files,
-                        "cwd": os.getcwd(),
-                    }
-                ),
-                404,
-            )
+
+        # Try other paths
+        alt_paths = [
+            os.path.join(
+                os.path.dirname(__file__),
+                "Meteostat_and_openweathermap_plots_only.html",
+            ),
+            "/var/www/virtual/zef/html/predictions/Meteostat_and_openweathermap_plots_only.html",
+        ]
+
+        for alt_path in alt_paths:
+            if os.path.exists(alt_path):
+                logger.info(f"Found at alternative path: {alt_path}")
+                with open(alt_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+                logger.info(f"Loaded {len(html_content)} bytes from {alt_path}")
+                return html_content
+
+        logger.warning(f"File not found: {plots_file}")
+        available_files = [f for f in os.listdir(".") if f.endswith(".html")]
+        logger.info(f"Available HTML files: {available_files}")
+        return (
+            jsonify(
+                {
+                    "error": f"Plots file not found",
+                    "available": available_files,
+                    "cwd": os.getcwd(),
+                }
+            ),
+            404,
+        )
     except Exception as e:
         logger.error(f"Error in get_plots: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
