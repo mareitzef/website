@@ -27,6 +27,7 @@ if sys.version_info < (3, 7):
 
 
 @app.route("/")
+@app.route("/predictions/")
 def index():
     logger.info("GET / - Serving index.html")
     try:
@@ -53,6 +54,7 @@ def index():
 
 
 @app.route("/initial-plots")
+@app.route("/predictions/initial-plots")
 def initial_plots():
     print("Serving:", PLOT_FILE)
 
