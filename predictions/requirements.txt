@@ -1,0 +1,8 @@
+Flask==3.0.0
+flask-cors==4.0.0
+# Add any other dependencies your weather script needs
+# For example:
+# pandas
+# numpy
+# plotly
+# matplotlib
