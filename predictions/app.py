@@ -10,8 +10,12 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder=".", static_url_path="")
+# app = Flask(__name__, static_folder=".", static_url_path="")
+app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PLOT_FILE = os.path.join(BASE_DIR, "Meteostat_and_openweathermap_plots_only.html")
 
 logger.info(f"Flask app initialized")
 logger.info(f"Current working directory: {os.getcwd()}")
@@ -51,9 +55,12 @@ def index():
 
 @app.route("/initial-plots")
 def initial_plots():
-    path = os.path.join(os.getcwd(), "Meteostat_and_openweathermap_plots_only.html")
-    print("Serving:", path)
-    return send_file(path)
+    print("Serving:", PLOT_FILE)
+
+    if not os.path.exists(PLOT_FILE):
+        return f"File not found: {PLOT_FILE}", 500
+
+    return send_file(PLOT_FILE)
 
 
 @app.route("/predict", methods=["POST"])
