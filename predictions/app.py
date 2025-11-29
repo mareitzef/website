@@ -10,9 +10,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# app = Flask(__name__, static_folder=".", static_url_path="")
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
+CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PLOT_FILE = os.path.join(BASE_DIR, "Meteostat_and_openweathermap_plots_only.html")
@@ -27,7 +27,7 @@ if sys.version_info < (3, 7):
     print("Running on Python 3.6 - some features may be limited")
 
 
-@app.route("/")
+@app.route("/predictions/")
 def index():
     logger.info("GET / - Serving index.html")
     try:
@@ -53,7 +53,7 @@ def index():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/initial-plots")
+@app.route("/predictions/initial-plots")
 def initial_plots():
     print("Serving:", PLOT_FILE)
 
@@ -63,7 +63,7 @@ def initial_plots():
     return send_file(PLOT_FILE)
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/predictions/predict", methods=["POST"])
 def predict():
     logger.info(f"POST /predict - Received request with data: {request.json}")
     try:
