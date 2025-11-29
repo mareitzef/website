@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import subprocess
 import os
@@ -15,7 +15,7 @@ if sys.version_info < (3, 7):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return open("index.html", "r", encoding="utf-8").read()
 
 
 @app.route("/plots")
