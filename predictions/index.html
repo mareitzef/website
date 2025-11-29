@@ -3,124 +3,108 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Prediction Tool</title>
-
-    <!-- Load Plotly ONLY once, globally -->
     <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
-
     <style>
         body {
-            font-family: sans-serif;
-            margin: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
         #loading {
             display: none;
-            margin-top: 10px;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.2em;
         }
 
         #error {
-            color: red;
             display: none;
-            margin-top: 10px;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        #output {
+            margin-top: 20px;
+        }
+
+        .plots-container {
+            width: 100%;
+        }
+
+        .plots-container>div {
+            margin-bottom: 30px;
         }
     </style>
 </head>
 
 <body>
+    <div class="container">
+        <h1>⛅ Weather Prediction</h1>
 
-    <h2>Weather Prediction Tool</h2>
+        <div id="loading">Loading plots...</div>
+        <div id="error"></div>
 
-    <!-- SINGLE INPUT SECTION -->
-    <form id="weatherForm">
-        <label>Latitude: <input type="number" id="latitude" step="0.0001"></label><br>
-        <label>Longitude: <input type="number" id="longitude" step="0.0001"></label><br>
-        <label>Start Date: <input type="date" id="start_date"></label><br><br>
-
-        <button type="submit">Generate</button>
-    </form>
-
-    <div id="loading">Loading…</div>
-    <div id="error"></div>
-
-    <!-- PLOTS GO HERE -->
-    <div id="output"></div>
+        <!-- Plots will be loaded here -->
+        <div id="output"></div>
+    </div>
 
     <script>
-        const output = document.getElementById("output");
-        const loading = document.getElementById("loading");
-        const errorDiv = document.getElementById("error");
+        const output = document.getElementById('output');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
 
-        // Load initial static plots when the page loads
-        window.addEventListener("load", () => loadInitialPlots());
+        // Load plots when page loads
+        window.addEventListener('load', () => {
+            loadPlots();
+        });
 
-        async function loadInitialPlots() {
-            loading.style.display = "block";
-            errorDiv.style.display = "none";
-
-            try {
-                // IMPORTANT: relative path (works inside /predictions/)
-                const r = await fetch("./initial-plots?t=" + Date.now());
-
-                if (!r.ok) throw new Error("Could not load initial plots");
-
-                const html = await r.text();
-
-                // Make sure Plotly JS inside plots is removed (avoid duplicates)
-                output.innerHTML = stripPlotlyIncludes(html);
-
-            } catch (err) {
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = "block";
-            } finally {
-                loading.style.display = "none";
-            }
-        }
-
-        // Remove duplicate script imports if backend accidentally includes them
-        function stripPlotlyIncludes(html) {
-            return html.replace(/<script[^>]*plotly[^>]*><\/script>/gi, "");
-        }
-
-        // Handle Generate (predictions)
-        document.getElementById("weatherForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            loading.style.display = "block";
-            errorDiv.style.display = "none";
-
-            const body = {};
-            if (latitude.value) body.latitude = parseFloat(latitude.value);
-            if (longitude.value) body.longitude = parseFloat(longitude.value);
-            if (start_date.value) body.start_date = start_date.value;
+        async function loadPlots() {
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
 
             try {
-                const r = await fetch("./predict", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body)
-                });
+                // Load the plots file directly
+                const response = await fetch('Meteostat_and_openweathermap_plots_only.html?t=' + Date.now());
 
-                const contentType = r.headers.get("content-type") || "";
-
-                if (contentType.includes("application/json")) {
-                    const data = await r.json();
-                    if (!r.ok) throw new Error(data.error || "Prediction failed");
-
-                    output.innerHTML = stripPlotlyIncludes(data.html);
-                } else {
-                    output.innerHTML = stripPlotlyIncludes(await r.text());
+                if (!response.ok) {
+                    throw new Error('Could not load plots file');
                 }
 
-            } catch (err) {
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = "block";
-            } finally {
-                loading.style.display = "none";
-            }
-        });
-    </script>
+                const html = await response.text();
+                output.innerHTML = html;
 
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 
 </html>
