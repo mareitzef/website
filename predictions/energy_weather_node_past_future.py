@@ -43,9 +43,9 @@ def save_plots(fig1, fig2):
 
     # Wrap both plots in a container
     plots_only = f"""<div class="plots-container">
-            {plot1_html}
-            {plot2_html}
-        </div>"""
+    {plot1_html}
+    {plot2_html}
+</div>"""
 
     filename = "Meteostat_and_openweathermap_plots_only.html"
     with open(filename, "w", encoding="utf-8") as f:
