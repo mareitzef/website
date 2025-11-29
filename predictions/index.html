@@ -32,25 +32,20 @@
 
         .form-section {
             background: #f8f9fa;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .form-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1.5fr;
-            gap: 15px;
-            margin-bottom: 15px;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr auto;
+            gap: 10px;
             align-items: end;
         }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
         .form-group label {
+            display: block;
             font-weight: 600;
             margin-bottom: 5px;
             color: #555;
@@ -58,11 +53,11 @@
         }
 
         .form-group input {
-            padding: 10px;
+            width: 100%;
+            padding: 8px;
             border: 2px solid #ddd;
             border-radius: 6px;
-            font-size: 1em;
-            transition: border-color 0.2s;
+            font-size: 0.95em;
         }
 
         .form-group input:focus {
@@ -70,29 +65,20 @@
             border-color: #667eea;
         }
 
-        .form-group input::placeholder {
-            color: #999;
-        }
-
         button {
-            padding: 10px 25px;
+            padding: 8px 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 1em;
+            font-size: 0.95em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
         }
 
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
+            opacity: 0.9;
         }
 
         #loading {
@@ -130,35 +116,36 @@
     <div class="container">
         <h1>⛅ Weather Prediction</h1>
 
-        <!-- Form Section -->
         <div class="form-section">
             <form id="weatherForm">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="location_name">Location Name</label>
+                        <label>Location Name</label>
                         <input type="text" id="location_name" placeholder="e.g., Freiburg">
                     </div>
                     <div class="form-group">
-                        <label for="latitude">Latitude</label>
+                        <label>Latitude</label>
                         <input type="number" id="latitude" step="0.0001" placeholder="47.99305">
                     </div>
                     <div class="form-group">
-                        <label for="longitude">Longitude</label>
+                        <label>Longitude</label>
                         <input type="number" id="longitude" step="0.0001" placeholder="7.84068">
                     </div>
                     <div class="form-group">
-                        <label for="start_date">Start Date</label>
+                        <label>Start Date</label>
                         <input type="date" id="start_date">
                     </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit">Generate</button>
+                    </div>
                 </div>
-                <button type="submit">Generate Prediction</button>
             </form>
         </div>
 
         <div id="loading">Loading plots...</div>
         <div id="error"></div>
 
-        <!-- Plots will be loaded here -->
         <div id="output"></div>
     </div>
 
@@ -168,7 +155,7 @@
         const errorDiv = document.getElementById('error');
         const form = document.getElementById('weatherForm');
 
-        // Load default plots when page loads
+        // Load plots when page loads
         window.addEventListener('load', () => {
             loadPlots();
         });
@@ -178,7 +165,6 @@
             e.preventDefault();
 
             const formData = {};
-
             const lat = document.getElementById('latitude').value;
             const lon = document.getElementById('longitude').value;
             const date = document.getElementById('start_date').value;
@@ -187,71 +173,83 @@
             if (lon) formData.longitude = parseFloat(lon);
             if (date) formData.start_date = date;
 
-            loadPlots(formData);
+            generatePrediction(formData);
         });
 
-        async function loadPlots(formData = {}) {
+        async function loadPlots() {
             loading.style.display = 'block';
             errorDiv.style.display = 'none';
-            output.innerHTML = '';
 
             try {
-                // If no form data, load initial plots
-                if (Object.keys(formData).length === 0) {
-                    const response = await fetch('initial-plots?t=' + Date.now());
+                const response = await fetch('initial-plots?t=' + Date.now());
 
-                    if (!response.ok) {
-                        throw new Error('Could not load initial plots');
-                    }
-
-                    let html = await response.text();
-                    output.innerHTML = html;
-
-                    // Execute any script tags
-                    executeScripts(output);
-                } else {
-                    // Generate new prediction
-                    const response = await fetch('predict', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(data.error || 'Prediction failed');
-                    }
-
-                    output.innerHTML = data.html;
-
-                    // Execute any script tags
-                    executeScripts(output);
+                if (!response.ok) {
+                    throw new Error('Could not load plots file');
                 }
+
+                let html = await response.text();
+                output.innerHTML = html;
+
+                const scripts = output.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.type = 'text/javascript';
+                    if (script.src) {
+                        newScript.src = script.src;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    document.body.appendChild(newScript);
+                });
 
             } catch (error) {
                 console.error('Load error:', error);
-                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.textContent = 'Error loading plots: ' + error.message;
                 errorDiv.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
             }
         }
 
-        function executeScripts(container) {
-            const scripts = container.querySelectorAll('script');
-            scripts.forEach(script => {
-                const newScript = document.createElement('script');
-                newScript.type = 'text/javascript';
-                if (script.src) {
-                    newScript.src = script.src;
-                } else {
-                    newScript.textContent = script.textContent;
+        async function generatePrediction(formData) {
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            output.innerHTML = '';
+
+            try {
+                const response = await fetch('predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Prediction failed');
                 }
-                document.body.appendChild(newScript);
-            });
+
+                output.innerHTML = data.html;
+
+                const scripts = output.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.type = 'text/javascript';
+                    if (script.src) {
+                        newScript.src = script.src;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    document.body.appendChild(newScript);
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
         }
     </script>
 </body>
