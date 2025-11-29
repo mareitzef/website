@@ -561,7 +561,7 @@ def main():
 
     # Load the HTML template
     env = Environment(loader=FileSystemLoader("."))
-    template = env.get_template("templates/template.html")
+    template = env.get_template("template.html")
 
     # Keep the existing template rendering
     html_output = template.render(plot1=plot1_html, plot2=plot2_html)
