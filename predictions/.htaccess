@@ -8,13 +8,10 @@
         WSGIProcessGroup predictions
         WSGIApplicationGroup %{GLOBAL}
         Require all granted
+        
+        # Allow direct access to static files
+        <FilesMatch "\.(html|css|js|png|jpg|jpeg|gif|ico|json)$">
+            SetHandler default-handler
+        </FilesMatch>
     </Directory>
-</IfModule>
-
-<IfModule !mod_wsgi.c>
-    # Fallback configuration for servers without mod_wsgi
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.html [L]
 </IfModule>
