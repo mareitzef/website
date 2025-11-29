@@ -57,7 +57,7 @@
 
             try {
                 // prevent browser cache: add timestamp
-                const r = await fetch("/initial-plots?t=" + Date.now());
+                const r = await fetch("/predictions/initial-plots?t=" + Date.now());
                 if (!r.ok) throw new Error("Could not load initial plots");
                 output.innerHTML = await r.text();
             } catch (err) {
