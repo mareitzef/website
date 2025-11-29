@@ -297,7 +297,7 @@
             loading.classList.add('active');
 
             try {
-                const response = await fetch('/plots');
+                const response = await fetch('/predictions/plots');
 
                 if (!response.ok) {
                     throw new Error('Failed to load plots file');
@@ -357,7 +357,7 @@
             loading.classList.add('active');
 
             try {
-                const response = await fetch('/predict', {
+                const response = await fetch('/predictions/predict', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -391,9 +391,7 @@
             } finally {
                 loading.classList.remove('active');
             }
-        }
-
-        function resetForm() {
+        } function resetForm() {
             form.reset();
             errorDiv.classList.remove('active');
             // Reload static plots
