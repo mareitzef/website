@@ -585,19 +585,19 @@ def main():
 
     webbrowser.open_new_tab(filename)
 
-    # output the data from Meteostats data_hourly_Mstat to an excel file including the datetime
-    df = pd.DataFrame(data_hourly_Mstat)
-    df = df.reset_index()
-    df.to_excel(
-        "Meteostat_data_since_"
-        + str(first_date)
-        + "_"
-        + str(lat)
-        + "_"
-        + str(lon)
-        + ".xlsx",
-        index=False,
-    )
+    # # output the data from Meteostats data_hourly_Mstat to an excel file including the datetime
+    # df = pd.DataFrame(data_hourly_Mstat)
+    # df = df.reset_index()
+    # df.to_excel(
+    #     "Meteostat_data_since_"
+    #     + str(first_date)
+    #     + "_"
+    #     + str(lat)
+    #     + "_"
+    #     + str(lon)
+    #     + ".xlsx",
+    #     index=False,
+    # )
 
 
 if __name__ == "__main__":

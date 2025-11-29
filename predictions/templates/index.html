@@ -220,6 +220,13 @@
                 <div class="form-group">
                     <label for="start_date">Start Date</label>
                     <input type="date" id="start_date" name="start_date" required>
+                    <div class="help-text">First day to plot past weather</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="api_key">OpenWeatherMap API Key (Optional)</label>
+                    <input type="text" id="api_key" name="api_key" placeholder="Enter your API key if you have one">
+                    <div class="help-text">Optional: For future forecast data</div>
                 </div>
 
                 <div class="button-group">
@@ -267,7 +274,8 @@
             const formData = {
                 latitude: parseFloat(document.getElementById('latitude').value),
                 longitude: parseFloat(document.getElementById('longitude').value),
-                start_date: document.getElementById('start_date').value
+                start_date: document.getElementById('start_date').value,
+                api_key: document.getElementById('api_key').value
             };
 
             try {
