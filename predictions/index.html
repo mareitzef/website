@@ -4,37 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Prediction Tool</title>
+    <title>Weather Prediction</title>
     <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
+            background-color: black;
+            color: limegreen;
+            font-family: 'Courier New', monospace;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            margin: 0;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         h1 {
-            color: #333;
+            font-size: 2.5em;
             text-align: center;
             margin-bottom: 30px;
+            text-shadow: 0 0 10px limegreen;
         }
 
         .form-section {
-            background: #f8f9fa;
+            border: 2px solid limegreen;
             padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            background-color: rgba(0, 255, 0, 0.05);
         }
 
         .form-row {
@@ -42,64 +39,83 @@
             grid-template-columns: 2fr 1fr 1fr 1.5fr auto;
             gap: 10px;
             align-items: end;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             display: block;
-            font-weight: 600;
             margin-bottom: 5px;
-            color: #555;
             font-size: 0.9em;
+            color: limegreen;
         }
 
         .form-group input {
             width: 100%;
             padding: 8px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+            background-color: black;
+            color: limegreen;
+            border: 2px solid limegreen;
+            font-family: 'Courier New', monospace;
             font-size: 0.95em;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
+            box-shadow: 0 0 10px limegreen;
+        }
+
+        .form-group input::placeholder {
+            color: #00ff0055;
         }
 
         button {
+            background-color: black;
+            color: limegreen;
+            border: 2px solid limegreen;
             padding: 8px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
             font-size: 0.95em;
-            font-weight: 600;
+            font-family: 'Courier New', monospace;
             cursor: pointer;
             white-space: nowrap;
         }
 
         button:hover {
-            opacity: 0.9;
+            background-color: limegreen;
+            color: black;
         }
 
         #loading {
             display: none;
             text-align: center;
             padding: 20px;
-            color: #667eea;
             font-size: 1.2em;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50% {
+                opacity: 1;
+            }
+
+            51%,
+            100% {
+                opacity: 0.3;
+            }
         }
 
         #error {
             display: none;
-            background: #fee;
-            color: #c33;
+            background-color: rgba(255, 0, 0, 0.2);
+            color: red;
+            border: 2px solid red;
             padding: 15px;
-            border-radius: 8px;
             margin: 20px 0;
         }
 
         #output {
-            margin-top: 20px;
+            margin-top: 30px;
         }
 
         .plots-container {
@@ -108,41 +124,87 @@
 
         .plots-container>div {
             margin-bottom: 30px;
+            border: 1px solid limegreen;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 1.2em;
+        }
+
+        .back-link a {
+            color: limegreen;
+            text-decoration: none;
+            border: 2px solid limegreen;
+            padding: 10px 20px;
+            display: inline-block;
+        }
+
+        .back-link a:hover {
+            background-color: limegreen;
+            color: black;
+        }
+
+        .ascii-art {
+            text-align: center;
+            font-size: 10px;
+            line-height: 1;
+            margin: 10px 0;
+            opacity: 0.6;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>⛅ Weather Prediction</h1>
+        <h1>⛈️ WEATHER PREDICTION TERMINAL ⛈️</h1>
+
+        <div class="ascii-art">
+            <pre>
+    .-.      .-.      .-.      .-.      .-.      .-.      .-.      .-. 
+   (   ).   (   ).   (   ).   (   ).   (   ).   (   ).   (   ).   (   )
+  (___)_)  (___)_)  (___)_)  (___)_)  (___)_)  (___)_)  (___)_)  (___)_)
+</pre>
+        </div>
 
         <div class="form-section">
             <form id="weatherForm">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Latitude</label>
+                        <label>> LOCATION_NAME</label>
+                        <input type="text" id="location_name" placeholder="e.g., Freiburg">
+                    </div>
+                    <div class="form-group">
+                        <label>> LATITUDE</label>
                         <input type="number" id="latitude" step="0.0001" placeholder="47.99305">
                     </div>
                     <div class="form-group">
-                        <label>Longitude</label>
+                        <label>> LONGITUDE</label>
                         <input type="number" id="longitude" step="0.0001" placeholder="7.84068">
                     </div>
                     <div class="form-group">
-                        <label>Start Date</label>
+                        <label>> START_DATE</label>
                         <input type="date" id="start_date">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
-                        <button type="submit">Generate</button>
+                        <button type="submit">[RUN]</button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <div id="loading">Loading plots...</div>
+        <div id="loading">>> PROCESSING DATA...</div>
         <div id="error"></div>
 
         <div id="output"></div>
+
+        <div class="back-link">
+            <a href="/">[← BACK TO MAIN]</a>
+        </div>
     </div>
 
     <script>
@@ -200,7 +262,7 @@
 
             } catch (error) {
                 console.error('Load error:', error);
-                errorDiv.textContent = 'Error loading plots: ' + error.message;
+                errorDiv.textContent = '>> ERROR: ' + error.message;
                 errorDiv.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
@@ -241,7 +303,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.textContent = '>> ERROR: ' + error.message;
                 errorDiv.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
