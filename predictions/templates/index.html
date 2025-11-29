@@ -297,7 +297,7 @@
             loading.classList.add('active');
 
             try {
-                const response = await fetch('../Meteostat_and_openweathermap_plots_only.html');
+                const response = await fetch('/plots');
 
                 if (!response.ok) {
                     throw new Error('Failed to load plots file');

@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 import subprocess
 import os
 import json
 import sys
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)  # Enable CORS for all routes
 
 # Ensure Python 3.6 compatibility
@@ -18,7 +18,21 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/plots")
+def get_plots():
+    """Serve the static HTML plots file"""
+    try:
+        plots_file = "Meteostat_and_openweathermap_plots_only.html"
+        if os.path.exists(plots_file):
+            with open(plots_file, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return html_content
+        else:
+            return jsonify({"error": "Plots file not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500 @ app.route("/predict", methods=["POST"])
+
+
 def predict():
     try:
         # Get form data
