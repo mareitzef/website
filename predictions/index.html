@@ -181,7 +181,7 @@
             errorDiv.style.display = 'none';
 
             try {
-                const response = await fetch('initial-plots?t=' + Date.now());
+                const response = await fetch('/predictions/initial-plots?t=' + Date.now());
 
                 if (!response.ok) {
                     throw new Error('Could not load plots file');
@@ -217,7 +217,7 @@
             output.innerHTML = '';
 
             try {
-                const response = await fetch('predict', {
+                const response = await fetch('/predictions/predict', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
