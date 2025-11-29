@@ -73,7 +73,8 @@ def predict():
             )
 
         # Look for the generated HTML file
-        expected_filename = f"Meteostat_and_openweathermap_plots_only.html"
+        # Pattern: Meteostat_and_openweathermap_since_{date}_{lat}_{lon}_test.html
+        expected_filename = f"Meteostat_and_openweathermap_since_{start_date}_{latitude}_{longitude}_test.html"
 
         if os.path.exists(expected_filename):
             with open(expected_filename, "r", encoding="utf-8") as f:

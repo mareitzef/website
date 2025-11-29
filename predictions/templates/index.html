@@ -212,29 +212,23 @@
         <div class="form-container">
             <form id="weatherForm">
                 <div class="form-group">
-                    <label for="latitude">Latitude</label>
+                    <label for="latitude">Latitude (Optional)</label>
                     <input type="number" id="latitude" name="latitude" step="0.0001" min="-90" max="90"
-                        placeholder="e.g., 48.0196" required>
-                    <div class="help-text">Enter a value between -90 and 90</div>
+                        placeholder="Default: 47.99305 (Freiburg)">
+                    <div class="help-text">Leave empty to use default location</div>
                 </div>
 
                 <div class="form-group">
-                    <label for="longitude">Longitude</label>
+                    <label for="longitude">Longitude (Optional)</label>
                     <input type="number" id="longitude" name="longitude" step="0.0001" min="-180" max="180"
-                        placeholder="e.g., 7.8500" required>
-                    <div class="help-text">Enter a value between -180 and 180</div>
+                        placeholder="Default: 7.84068 (Freiburg)">
+                    <div class="help-text">Leave empty to use default location</div>
                 </div>
 
                 <div class="form-group">
-                    <label for="start_date">Start Date</label>
-                    <input type="date" id="start_date" name="start_date" required>
-                    <div class="help-text">First day to plot past weather</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="api_key">OpenWeatherMap API Key (Optional)</label>
-                    <input type="text" id="api_key" name="api_key" placeholder="Enter your API key if you have one">
-                    <div class="help-text">Optional: For future forecast data</div>
+                    <label for="start_date">Start Date (Optional)</label>
+                    <input type="date" id="start_date" name="start_date">
+                    <div class="help-text">Leave empty to use last 7 days</div>
                 </div>
 
                 <div class="button-group">
@@ -269,23 +263,34 @@
         const resultContainer = document.getElementById('resultContainer');
         const outputFrame = document.getElementById('outputFrame');
 
+        // Load default plot on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPrediction({});
+        });
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Get form data (only if filled in)
+            const formData = {};
+
+            const lat = document.getElementById('latitude').value;
+            const lon = document.getElementById('longitude').value;
+            const date = document.getElementById('start_date').value;
+
+            if (lat) formData.latitude = parseFloat(lat);
+            if (lon) formData.longitude = parseFloat(lon);
+            if (date) formData.start_date = date;
+
+            loadPrediction(formData);
+        });
+
+        async function loadPrediction(formData) {
             // Hide previous results and errors
             errorDiv.classList.remove('active');
-            resultContainer.classList.remove('active');
 
             // Show loading
             loading.classList.add('active');
-
-            // Get form data
-            const formData = {
-                latitude: parseFloat(document.getElementById('latitude').value),
-                longitude: parseFloat(document.getElementById('longitude').value),
-                start_date: document.getElementById('start_date').value,
-                api_key: document.getElementById('api_key').value
-            };
 
             try {
                 const response = await fetch('/predict', {
@@ -312,17 +317,14 @@
             } finally {
                 loading.classList.remove('active');
             }
-        });
+        }
 
         function resetForm() {
             form.reset();
             errorDiv.classList.remove('active');
-            resultContainer.classList.remove('active');
-            outputFrame.innerHTML = '';
+            // Reload default plot
+            loadPrediction({});
         }
-
-        // Set today's date as default
-        document.getElementById('start_date').valueAsDate = new Date();
     </script>
 </body>
 
