@@ -31,44 +31,52 @@
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 15px 30px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.8em;
+            margin-bottom: 5px;
         }
 
         .header p {
-            font-size: 1.1em;
+            font-size: 0.95em;
             opacity: 0.9;
         }
 
         .form-container {
-            padding: 40px;
+            padding: 20px 30px;
+            background: #f9f9f9;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto auto;
+            gap: 15px;
+            align-items: flex-end;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 0;
         }
 
         label {
             display: block;
             font-weight: 600;
             color: #333;
-            margin-bottom: 8px;
-            font-size: 1.1em;
+            margin-bottom: 5px;
+            font-size: 0.9em;
         }
 
         input[type="text"],
         input[type="number"],
         input[type="date"] {
             width: 100%;
-            padding: 12px 15px;
+            padding: 10px 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 0.95em;
             transition: border-color 0.3s;
         }
 
@@ -79,19 +87,19 @@
 
         .button-group {
             display: flex;
-            gap: 15px;
-            margin-top: 30px;
+            gap: 10px;
+            margin-top: 0;
         }
 
         button {
-            flex: 1;
-            padding: 15px 30px;
+            padding: 10px 20px;
             border: none;
             border-radius: 8px;
-            font-size: 1.1em;
+            font-size: 0.95em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -180,18 +188,15 @@
 
         .output-frame {
             width: 100%;
-            min-height: 500px;
+            height: auto;
             border: none;
             background: white;
+            overflow: visible;
         }
 
-        /* Plotly plot styling */
-        .plots-container {
-            width: 100%;
-        }
-
-        .plots-container>div {
-            margin-bottom: 30px;
+        .output-frame svg {
+            width: 100% !important;
+            height: auto !important;
         }
 
         .help-text {
@@ -211,37 +216,36 @@
 
         <div class="form-container">
             <form id="weatherForm">
-                <div class="form-group">
-                    <label for="latitude">Latitude (Optional)</label>
-                    <input type="number" id="latitude" name="latitude" step="0.0001" min="-90" max="90"
-                        placeholder="Default: 47.99305 (Freiburg)">
-                    <div class="help-text">Leave empty to use default location</div>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="latitude">Latitude (Optional)</label>
+                        <input type="number" id="latitude" name="latitude" step="0.0001" min="-90" max="90"
+                            placeholder="47.99305">
+                    </div>
 
-                <div class="form-group">
-                    <label for="longitude">Longitude (Optional)</label>
-                    <input type="number" id="longitude" name="longitude" step="0.0001" min="-180" max="180"
-                        placeholder="Default: 7.84068 (Freiburg)">
-                    <div class="help-text">Leave empty to use default location</div>
-                </div>
+                    <div class="form-group">
+                        <label for="longitude">Longitude (Optional)</label>
+                        <input type="number" id="longitude" name="longitude" step="0.0001" min="-180" max="180"
+                            placeholder="7.84068">
+                    </div>
 
-                <div class="form-group">
-                    <label for="start_date">Start Date (Optional)</label>
-                    <input type="date" id="start_date" name="start_date">
-                    <div class="help-text">Leave empty to use last 7 days</div>
-                </div>
+                    <div class="form-group">
+                        <label for="start_date">Start Date (Optional)</label>
+                        <input type="date" id="start_date" name="start_date">
+                    </div>
 
-                <div class="button-group">
-                    <button type="submit" class="btn-primary">
-                        Generate Prediction
-                    </button>
-                    <button type="button" class="btn-secondary" onclick="resetForm()">
-                        Reset
-                    </button>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">
+                            Generate
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="resetForm()">
+                            Reset
+                        </button>
+                    </div>
                 </div>
             </form>
 
-            <div class="loading" id="loading">
+            <div class="loading" id="loading" style="margin-top: 15px;">
                 <div class="spinner"></div>
                 <p>Generating weather prediction... This may take a moment.</p>
             </div>
