@@ -321,6 +321,19 @@
             }
         }
     </script>
+
+    <script>
+        const music = document.getElementById('bg-music');
+
+        function playMusic() {
+            music.play();
+        }
+
+        function stopMusic() {
+            music.pause();
+            music.currentTime = 0;  // Reset the music to the start
+        }
+    </script>
 </body>
 
 </html>
