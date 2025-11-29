@@ -264,7 +264,8 @@ def main():
         if args.number_of_days:
             nr_days = int(args.number_of_days)
             first_date = datetime.today() - timedelta(days=nr_days)
-            first_date = datetime.strptime(args.first_date, "%Y-%m-%d")
+        else:
+            first_date = datetime.strptime(str(args.first_date), "%Y-%m-%d")
 
     else:
         # use these coordinates

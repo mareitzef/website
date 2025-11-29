@@ -88,7 +88,7 @@ def predict():
         cmd = ["python", script_path]
 
         if start_date:
-            cmd.extend(["--start_date", start_date])
+            cmd.extend(["--first_date", start_date])
 
         if latitude and longitude:
             cmd.extend(["--latitude", str(latitude), "--longitude", str(longitude)])
