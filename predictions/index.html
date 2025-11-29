@@ -305,12 +305,8 @@
 
                 const html_content = await response.text();
 
-                // Extract body content if it exists
-                const bodyMatch = html_content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                const plot_content = bodyMatch ? bodyMatch[1] : html_content;
-
-                // Display the result
-                outputFrame.innerHTML = plot_content;
+                // Display the content directly (should be plot divs)
+                outputFrame.innerHTML = html_content;
                 resultContainer.classList.add('active');
 
             } catch (error) {

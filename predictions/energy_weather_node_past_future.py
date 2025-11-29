@@ -569,11 +569,10 @@ def main():
     with open(filename, "w") as f:
         f.write(html_output)
 
-    # ALSO save just the plots for embedding
-    plots_only = f"""
-    <div class="plots-container">
-        {plot1_html}
-        {plot2_html}
+    # ALSO save just the plots for embedding (only the div and script elements)
+    plots_only = f"""<div class="plots-container">
+    {plot1_html}
+    {plot2_html}
     </div>
     """
     with open(filename, "w") as f:
