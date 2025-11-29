@@ -365,14 +365,24 @@
                     body: JSON.stringify(formData)
                 });
 
-                const data = await response.json();
+                const contentType = response.headers.get('content-type');
+                let data;
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'An error occurred');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'An error occurred');
+                    }
+
+                    // Display the result (should be plot divs)
+                    outputFrame.innerHTML = data.html;
+                } else {
+                    // Response is HTML, treat it as plots
+                    const html_content = await response.text();
+                    outputFrame.innerHTML = html_content;
                 }
 
-                // Display the result (should be plot divs)
-                outputFrame.innerHTML = data.html;
                 resultContainer.classList.add('active');
 
             } catch (error) {

@@ -1,17 +1,28 @@
-<IfModule mod_wsgi.c>
-    WSGIScriptAlias / /home/zef/html/predictions/predictions.wsgi
-    WSGIDaemonProcess predictions python-home=/home/zef/html/predictions/venv python-path=/home/zef/html/predictions
-    WSGIProcessGroup predictions
-    WSGIApplicationGroup %{GLOBAL}
+<IfModule mod_cgi.c>
+    AddHandler cgi-script .cgi
     
-    <Directory /home/zef/html/predictions>
-        WSGIProcessGroup predictions
-        WSGIApplicationGroup %{GLOBAL}
-        Require all granted
+    # Direct all requests to app.cgi
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteBase /predictions/
         
-        # Allow direct access to static files
-        <FilesMatch "\.(html|css|js|png|jpg|jpeg|gif|ico|json)$">
-            SetHandler default-handler
-        </FilesMatch>
-    </Directory>
+        # Don't rewrite static files
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteCond %{REQUEST_FILENAME} !\.cgi$
+        
+        # Rewrite to app.cgi
+        RewriteRule ^(.*)$ app.cgi/$1 [QSA,L]
+    </IfModule>
+</IfModule>
+
+<IfModule !mod_cgi.c>
+    # Fallback if CGI is not available
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteBase /predictions/
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule ^(.*)$ index.html [QSA,L]
+    </IfModule>
 </IfModule>
