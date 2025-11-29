@@ -72,33 +72,40 @@ def predict():
                 500,
             )
 
-        # Look for HTML output files (your script might generate these)
-        # Check common output filenames
-        possible_outputs = [
-            "weather_forecast.html",
-            "output.html",
-            "weather_plot.html",
-            "forecast.html",
-        ]
+        # Look for the generated HTML file
+        expected_filename = f"Meteostat_and_openweathermap_plots_only.html"
 
-        html_content = None
-        for output_file in possible_outputs:
-            if os.path.exists(output_file):
-                with open(output_file, "r", encoding="utf-8") as f:
-                    html_content = f.read()
-                break
+        if os.path.exists(expected_filename):
+            with open(expected_filename, "r", encoding="utf-8") as f:
+                html_content = f.read()
 
-        # If no file found, check if stdout contains HTML
-        if not html_content and "<html>" in result.stdout.lower():
-            html_content = result.stdout
+            # Extract just the plot divs from the generated HTML
+            # We'll embed these into our page instead of the full HTML
+            import re
 
-        if html_content:
-            return jsonify({"success": True, "html": html_content})
+            # Try to extract the body content or the plots
+            # This depends on your template structure
+            body_match = re.search(
+                r"<body[^>]*>(.*?)</body>", html_content, re.DOTALL | re.IGNORECASE
+            )
+            if body_match:
+                plot_content = body_match.group(1)
+            else:
+                # If no body tag, use the whole content
+                plot_content = html_content
+
+            return jsonify(
+                {"success": True, "html": plot_content, "filename": expected_filename}
+            )
         else:
+            # List files to help debug
+            files = [f for f in os.listdir(".") if f.endswith(".html")]
             return (
                 jsonify(
                     {
-                        "error": "No HTML output found",
+                        "error": "Output file not found",
+                        "expected": expected_filename,
+                        "available_files": files,
                         "stdout": result.stdout,
                         "stderr": result.stderr,
                     }
@@ -109,7 +116,9 @@ def predict():
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Script execution timeout"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 if __name__ == "__main__":

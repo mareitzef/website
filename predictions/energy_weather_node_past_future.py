@@ -563,27 +563,23 @@ def main():
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("templates/template.html")
 
-    # Render the template with the plots' HTML
+    # Keep the existing template rendering
     html_output = template.render(plot1=plot1_html, plot2=plot2_html)
-
-    # Write the output to an HTML file
-    filename = (
-        "Meteostat_and_openweathermap_since_"
-        + str(first_date)
-        + "_"
-        + str(lat)
-        + "_"
-        + str(lon)
-        + "_test.html"
-    )
-
-    with open(
-        filename,
-        "w",
-    ) as f:
+    filename = "Meteostat_and_openweathermap_plots_only.html"
+    with open(filename, "w") as f:
         f.write(html_output)
 
-    webbrowser.open_new_tab(filename)
+    # ALSO save just the plots for embedding
+    plots_only = f"""
+    <div class="plots-container">
+        {plot1_html}
+        {plot2_html}
+    </div>
+    """
+    with open(filename, "w") as f:
+        f.write(plots_only)
+
+    # webbrowser.open_new_tab(filename)
 
     # # output the data from Meteostats data_hourly_Mstat to an excel file including the datetime
     # df = pd.DataFrame(data_hourly_Mstat)

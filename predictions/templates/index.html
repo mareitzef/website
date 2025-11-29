@@ -181,9 +181,17 @@
         .output-frame {
             width: 100%;
             min-height: 500px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border: none;
             background: white;
+        }
+
+        /* Plotly plot styling */
+        .plots-container {
+            width: 100%;
+        }
+
+        .plots-container>div {
+            margin-bottom: 30px;
         }
 
         .help-text {
@@ -248,11 +256,12 @@
         </div>
 
         <div class="result-container" id="resultContainer">
-            <h2>Prediction Results</h2>
+            <h2>Weather Prediction Results</h2>
             <div id="outputFrame" class="output-frame"></div>
         </div>
     </div>
 
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
         const form = document.getElementById('weatherForm');
         const loading = document.getElementById('loading');
