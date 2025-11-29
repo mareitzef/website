@@ -4,9 +4,19 @@ import subprocess
 import os
 import json
 import sys
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)  # Enable CORS for all routes
+
+logger.info(f"Flask app initialized")
+logger.info(f"Current working directory: {os.getcwd()}")
+logger.info(f"App root path: {app.root_path}")
+logger.info(f"Static folder: {app.static_folder}")
 
 # Ensure Python 3.6 compatibility
 if sys.version_info < (3, 7):
@@ -15,26 +25,53 @@ if sys.version_info < (3, 7):
 
 @app.route("/")
 def index():
-    return open("index.html", "r", encoding="utf-8").read()
+    logger.info("GET / - Serving index.html")
+    try:
+        content = open("index.html", "r", encoding="utf-8").read()
+        logger.info(f"Successfully loaded index.html ({len(content)} bytes)")
+        return content
+    except Exception as e:
+        logger.error(f"Error loading index.html: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/plots")
 def get_plots():
     """Serve the static HTML plots file"""
+    logger.info("GET /plots - Fetching static plots")
     try:
         plots_file = "Meteostat_and_openweathermap_plots_only.html"
+        full_path = os.path.join(os.getcwd(), plots_file)
+        logger.info(f"Looking for: {full_path}")
+
         if os.path.exists(plots_file):
+            logger.info(f"Found {plots_file}")
             with open(plots_file, "r", encoding="utf-8") as f:
                 html_content = f.read()
+            logger.info(f"Loaded {len(html_content)} bytes from {plots_file}")
             return html_content
         else:
-            return jsonify({"error": "Plots file not found"}), 404
+            logger.warning(f"File not found: {plots_file}")
+            available_files = [f for f in os.listdir(".") if f.endswith(".html")]
+            logger.info(f"Available HTML files: {available_files}")
+            return (
+                jsonify(
+                    {
+                        "error": f"Plots file not found",
+                        "available": available_files,
+                        "cwd": os.getcwd(),
+                    }
+                ),
+                404,
+            )
     except Exception as e:
+        logger.error(f"Error in get_plots: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    logger.info(f"POST /predict - Received request with data: {request.json}")
     try:
         # Get form data
         data = request.json
@@ -42,11 +79,17 @@ def predict():
         longitude = data.get("longitude", "7.70911552")
         start_date = data.get("start_date", "")
 
+        logger.info(f"Parameters: lat={latitude}, lon={longitude}, date={start_date}")
+
         # Path to your weather prediction script
         script_path = os.path.join(
             os.path.dirname(__file__), "energy_weather_node_past_future.py"
         )
         work_dir = os.path.dirname(__file__)
+
+        logger.info(f"Script path: {script_path}")
+        logger.info(f"Work directory: {work_dir}")
+        logger.info(f"Script exists: {os.path.exists(script_path)}")
 
         # Build command with arguments
         cmd = ["python", script_path]
@@ -57,6 +100,8 @@ def predict():
         if latitude and longitude:
             cmd.extend(["--latitude", str(latitude), "--longitude", str(longitude)])
 
+        logger.info(f"Executing command: {' '.join(cmd)}")
+
         # Run the script in the correct directory
         result = subprocess.run(
             cmd,
@@ -66,7 +111,14 @@ def predict():
             cwd=work_dir,
         )
 
+        logger.info(f"Script returned code: {result.returncode}")
+        if result.stdout:
+            logger.info(f"Script stdout: {result.stdout[:500]}")
+        if result.stderr:
+            logger.error(f"Script stderr: {result.stderr[:500]}")
+
         if result.returncode != 0:
+            logger.error(f"Script execution failed")
             return (
                 jsonify(
                     {
@@ -84,10 +136,16 @@ def predict():
             work_dir, "Meteostat_and_openweathermap_plots_only.html"
         )
 
+        logger.info(f"Looking for output file: {plots_filename}")
+        logger.info(f"File exists: {os.path.exists(plots_filename)}")
+
         if os.path.exists(plots_filename):
             with open(plots_filename, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
+            logger.info(
+                f"Successfully loaded {len(html_content)} bytes from output file"
+            )
             # Return the plots directly (already just divs, no body tags)
             return jsonify(
                 {"success": True, "html": html_content, "filename": plots_filename}
@@ -95,6 +153,7 @@ def predict():
         else:
             # List files to help debug
             files = [f for f in os.listdir(work_dir) if f.endswith(".html")]
+            logger.error(f"Output file not found. Available HTML files: {files}")
             return (
                 jsonify(
                     {
@@ -110,10 +169,12 @@ def predict():
             )
 
     except subprocess.TimeoutExpired:
+        logger.error("Script execution timeout")
         return jsonify({"error": "Script execution timeout"}), 500
     except Exception as e:
         import traceback
 
+        logger.error(f"Exception in predict: {e}", exc_info=True)
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
