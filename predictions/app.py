@@ -71,11 +71,14 @@ def predict():
     try:
         # Get form data
         data = request.json
+        location = data.get("location_name", "KYOLO")
         latitude = data.get("latitude", "47.9161926")
         longitude = data.get("longitude", "7.70911552")
         start_date = data.get("start_date", "")
 
-        logger.info(f"Parameters: lat={latitude}, lon={longitude}, date={start_date}")
+        logger.info(
+            f"Parameters: loc={location} lat={latitude}, lon={longitude}, date={start_date}"
+        )
 
         # Path to your weather prediction script
         script_path = os.path.join(
@@ -88,7 +91,10 @@ def predict():
         logger.info(f"Script exists: {os.path.exists(script_path)}")
 
         # Build command with arguments
-        cmd = ["python", script_path]
+        cmd = [sys.executable, script_path]
+
+        if location:
+            cmd.extend(["--location", location])
 
         if start_date:
             cmd.extend(["--first_date", start_date])

@@ -37,11 +37,11 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 def save_plots(fig1, fig2):
-    plot1_html = fig1.to_html(full_html=False, include_plotlyjs=False, div_id="plot1")
     plot2_html = fig2.to_html(full_html=False, include_plotlyjs=False, div_id="plot2")
+    plot1_html = fig1.to_html(full_html=False, include_plotlyjs=False, div_id="plot1")
     plots_only = f"""<div class="plots-container">
-    {plot1_html}
     {plot2_html}
+    {plot1_html}
 </div>"""
     filename = "Meteostat_and_openweathermap_plots_only.html"
     with open(filename, "w", encoding="utf-8") as f:
@@ -204,9 +204,10 @@ def main():
     today = datetime.today()
 
     # start date is one week before today
-    location = "TODO"
     nr_days = 7
     first_date = datetime.today() - timedelta(days=nr_days)
+    # convert to string for default
+    first_date_default = first_date.strftime("%Y-%m-%d")
     # OpenWeatherMap API key
     api_key = "6545b0638b99383c1a278d3962506f4b"
 
@@ -224,6 +225,9 @@ def main():
             help="OpenWeatherMap API key",
             default="6545b0638b99383c1a278d3962506f4b",
         )
+        parser.add_argument(
+            "-l", "--location", help="Name of your location", default="KYOLO"
+        )
         # lat with CCC coordinates as default value
         parser.add_argument(
             "-lat", "--latitude", help="Latitude of location", default="47.99305"
@@ -235,11 +239,9 @@ def main():
             "-f",
             "--first_date",
             help="Set first day to plot past weather",
-            default=first_date,
+            default=first_date_default,
         )
-        parser.add_argument(
-            "-l", "--last_date", help="Set last day to plot past weather", default=today
-        )
+
         # add input variable number_of_days to parser
         parser.add_argument(
             "-n",
@@ -250,22 +252,23 @@ def main():
 
         # parse the command-line arguments
         args = parser.parse_args()
-        # write args into lat and lon if empty
-        # convert lat to datetime
+        location = args.location
         lat = args.latitude
         lon = args.longitude
         api_key = args.api_key
-        first_date = datetime.strptime(args.first_date, "%Y-%m-%d")
+        if args.first_date:
+            first_date = datetime.strptime(args.first_date, "%Y-%m-%d")
         # if there is argment in number_of_days, replace first_date with (datetime.today() - timedelta(days=nr_days))
         if args.number_of_days:
             nr_days = int(args.number_of_days)
             first_date = datetime.today() - timedelta(days=nr_days)
-        else:
             first_date = datetime.strptime(str(args.first_date), "%Y-%m-%d")
+        else:
+            first_date = first_date_default
 
     else:
         # use these coordinates
-        location = "Bad Krotzingen"  # 47.91619260655593, 7.709115528489728
+        location = "KYOLO"  # 47.91619260655593, 7.709115528489728
         lat = "47.9161926"
         lon = "7.70911552"
 

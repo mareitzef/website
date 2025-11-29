@@ -174,16 +174,16 @@
             <form id="weatherForm">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>> LOCATION_NAME</label>
-                        <input type="text" id="location_name" placeholder="e.g., Freiburg">
+                        <label>> LOCATION</label>
+                        <input type="text" id="location" placeholder="Optional e.g., KYOLO">
                     </div>
                     <div class="form-group">
                         <label>> LATITUDE</label>
-                        <input type="number" id="latitude" step="0.0001" placeholder="47.99305">
+                        <input type="number" id="latitude" step="0.000001" placeholder="47.99305">
                     </div>
                     <div class="form-group">
                         <label>> LONGITUDE</label>
-                        <input type="number" id="longitude" step="0.0001" placeholder="7.84068">
+                        <input type="number" id="longitude" step="0.000001" placeholder="7.84068">
                     </div>
                     <div class="form-group">
                         <label>> START_DATE</label>
@@ -233,10 +233,12 @@
             e.preventDefault();
 
             const formData = {};
+            const loc = document.getElementById('location').value;
             const lat = document.getElementById('latitude').value;
             const lon = document.getElementById('longitude').value;
             const date = document.getElementById('start_date').value;
 
+            if (loc) formData.location = parseFloat(loc);
             if (lat) formData.latitude = parseFloat(lat);
             if (lon) formData.longitude = parseFloat(lon);
             if (date) formData.start_date = date;
