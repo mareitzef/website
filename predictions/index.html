@@ -11,18 +11,15 @@
             margin: 20px;
         }
 
-        .box {
-            margin-bottom: 20px;
-        }
-
         #loading {
             display: none;
-            color: #444;
+            margin-top: 10px;
         }
 
         #error {
             color: red;
             display: none;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -31,19 +28,19 @@
 
     <h2>Weather Prediction Tool</h2>
 
-    <div class="box">
-        <form id="weatherForm">
-            <label>Latitude: <input type="number" id="latitude" step="0.0001"></label><br>
-            <label>Longitude: <input type="number" id="longitude" step="0.0001"></label><br>
-            <label>Start Date: <input type="date" id="start_date"></label><br><br>
-            <button type="submit">Generate</button>
-            <button type="button" onclick="resetForm()">Reset</button>
-        </form>
-    </div>
+    <!-- ONLY ONE INPUT SECTION -->
+    <form id="weatherForm">
+        <label>Latitude: <input type="number" id="latitude" step="0.0001"></label><br>
+        <label>Longitude: <input type="number" id="longitude" step="0.0001"></label><br>
+        <label>Start Date: <input type="date" id="start_date"></label><br><br>
 
-    <div id="loading">Loading...</div>
+        <button type="submit">Generate</button>
+    </form>
+
+    <div id="loading">Loading…</div>
     <div id="error"></div>
 
+    <!-- PLOTS GO HERE -->
     <div id="output"></div>
 
     <script>
@@ -51,15 +48,17 @@
         const loading = document.getElementById("loading");
         const errorDiv = document.getElementById("error");
 
-        window.onload = () => loadStaticPlots();
+        // Load initial static plots on page load (always reloaded)
+        window.onload = () => loadInitialPlots();
 
-        async function loadStaticPlots() {
+        async function loadInitialPlots() {
             loading.style.display = "block";
             errorDiv.style.display = "none";
 
             try {
-                const r = await fetch("/predictions/plots");
-                if (!r.ok) throw new Error("Failed loading static plots");
+                // prevent browser cache: add timestamp
+                const r = await fetch("/initial-plots?t=" + Date.now());
+                if (!r.ok) throw new Error("Could not load initial plots");
                 output.innerHTML = await r.text();
             } catch (err) {
                 errorDiv.textContent = err.message;
@@ -69,6 +68,7 @@
             }
         }
 
+        // Handle prediction
         document.getElementById("weatherForm").onsubmit = async (e) => {
             e.preventDefault();
 
@@ -87,11 +87,11 @@
                     body: JSON.stringify(body)
                 });
 
-                const contentType = r.headers.get("content-type");
+                const type = r.headers.get("content-type");
 
-                if (contentType.includes("application/json")) {
+                if (type.includes("application/json")) {
                     const data = await r.json();
-                    if (!r.ok) throw new Error(data.error || "Prediction error");
+                    if (!r.ok) throw new Error(data.error || "Prediction failed");
                     output.innerHTML = data.html;
                 } else {
                     output.innerHTML = await r.text();
@@ -104,11 +104,6 @@
                 loading.style.display = "none";
             }
         };
-
-        function resetForm() {
-            document.getElementById("weatherForm").reset();
-            loadStaticPlots();
-        }
     </script>
 
 </body>
