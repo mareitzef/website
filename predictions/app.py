@@ -23,14 +23,12 @@ def predict():
     try:
         # Get form data
         data = request.json
-        latitude = data.get("latitude")
-        longitude = data.get("longitude")
-        start_date = data.get("start_date")
-        api_key = data.get("api_key", "")  # Optional API key
+        latitude = data.get("latitude", "47.9161926")
+        longitude = data.get("longitude", "7.70911552")
+        start_date = data.get("start_date", "")
+        # api_key = data.get("api_key", "")  # Optional API key
 
         # Validate inputs
-        if not all([latitude, longitude, start_date]):
-            return jsonify({"error": "Missing required fields"}), 400
 
         # Path to your weather prediction script
         script_path = "energy_weather_node_past_future.py"
@@ -39,17 +37,19 @@ def predict():
         cmd = [
             "python",
             script_path,
-            "--latitude",
-            str(latitude),
-            "--longitude",
-            str(longitude),
-            "--first_date",
-            start_date,
         ]
+        if start_date:
+            cmd.extend(["--start_date", start_date])
 
         # Add API key if provided
-        if api_key:
-            cmd.extend(["--api_key", api_key])
+        # if api_key:
+        #     cmd.extend(["--api_key", api_key])
+
+        # if not all([latitude, longitude]):
+        #         return jsonify({"error": "Missing required fields"}), 400
+
+        if latitude and longitude:
+            cmd.extend(["--latitude", str(latitude), "--longitude", str(longitude)])
 
         # Run the script
         result = subprocess.run(
