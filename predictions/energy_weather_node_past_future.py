@@ -209,7 +209,7 @@ def main():
     today = datetime.today()
 
     # start date is one week before today
-    location = "Default"
+    location = "TODO"
     nr_days = 7
     first_date = datetime.today() - timedelta(days=nr_days)
     # OpenWeatherMap API key
