@@ -26,7 +26,7 @@ if sys.version_info < (3, 7):
     print("Running on Python 3.6 - some features may be limited")
 
 
-@app.route("/predictions/")
+@app.route("/")
 def index():
     logger.info("GET / - Serving index.html")
     try:
@@ -52,7 +52,7 @@ def index():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/predictions/initial-plots")
+@app.route("/initial-plots")
 def initial_plots():
     print("Serving:", PLOT_FILE)
 
@@ -62,6 +62,7 @@ def initial_plots():
     return send_file(PLOT_FILE)
 
 
+@app.route("/predict", methods=["POST"])
 @app.route("/predictions/predict", methods=["POST"])
 def predict():
     logger.info(f"POST /predict - Received request with data: {request.json}")

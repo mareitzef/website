@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask Predictions",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predictions/app.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/predictions",
+            "env": {
+                "FLASK_DEBUG": "1"
+            }
+        }
+    ]
+}
