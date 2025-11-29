@@ -96,11 +96,24 @@
 
                 let html = await response.text();
 
-                // Remove any duplicate Plotly includes or script tags that might cause issues
-                html = html.replace(/<script[^>]*src=[^>]*plotly[^>]*><\/script>/gi, '');
-                html = html.replace(/<script[^>]*>window\.PlotlyConfig[^<]*<\/script>/gi, '');
+                // Extract only the content inside .plots-container
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const plotsContainer = doc.querySelector('.plots-container');
 
-                output.innerHTML = html;
+                if (plotsContainer) {
+                    // Copy only the inner HTML of plots-container
+                    output.innerHTML = plotsContainer.innerHTML;
+                } else {
+                    // Fallback: remove problematic tags
+                    html = html.replace(/<!DOCTYPE[^>]*>/gi, '');
+                    html = html.replace(/<\/?html[^>]*>/gi, '');
+                    html = html.replace(/<head>[\s\S]*?<\/head>/gi, '');
+                    html = html.replace(/<\/?body[^>]*>/gi, '');
+                    html = html.replace(/<script[^>]*src=[^>]*plotly[^>]*><\/script>/gi, '');
+                    html = html.replace(/<script[^>]*>window\.PlotlyConfig[^<]*<\/script>/gi, '');
+                    output.innerHTML = html;
+                }
 
             } catch (error) {
                 console.error('Load error:', error);
