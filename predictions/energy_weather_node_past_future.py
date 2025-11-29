@@ -28,11 +28,42 @@ from plotly import tools
 from windpowerlib import ModelChain, WindTurbine, create_power_curve
 from windpowerlib import data as wt
 import logging
+from jinja2 import Environment, FileSystemLoader
 
 logging.getLogger().setLevel(logging.DEBUG)
 
 # load a libary for ascii art
 # from pyfiglet import Figlet
+
+
+def save_plots(fig1, fig2):
+    plot1_html = fig1.to_html(full_html=False, include_plotlyjs="cdn")
+    plot2_html = fig2.to_html(full_html=False, include_plotlyjs="cdn")
+
+    html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+            <style>
+                body {{ margin:20px; font-family:sans-serif; }}
+                .plots-container {{ display:block; }}
+            </style>
+        </head>
+        <body>
+            <div class="plots-container">
+                {plot1_html}
+                {plot2_html}
+            </div>
+        </body>
+        </html>
+        """
+
+    filename = "Meteostat_and_openweathermap_plots_only.html"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html)
 
 
 def get_meteostat_data(lat, lon, first_date, today):
@@ -546,53 +577,7 @@ def main():
     fig2.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
     fig2.update_yaxes(title_text="Power (kW)", row=3, col=1, secondary_y=True)
 
-    # for i, p in enumerate(rain_probabs):
-    #     if p < 33:
-    #         color = 'rgba(173, 216, 230, ' + str(p/100) + ')'
-    #     elif p >= 33 and p < 67:
-    #         color = 'rgba(0, 0, 255, ' + str(p/100) + ')'
-    #     else:
-    #         color = 'rgba(0, 0, 139, ' + str(p/100) + ')'
-    #     fig2.data[1].marker.color[i] = color
-
-    # Get the HTML code for each plot
-    plot1_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
-    plot2_html = fig2.to_html(full_html=False, include_plotlyjs="cdn")
-
-    # Load the HTML template
-    env = Environment(loader=FileSystemLoader("."))
-    template = env.get_template("template.html")
-
-    # Keep the existing template rendering
-    html_output = template.render(plot1=plot1_html, plot2=plot2_html)
-    filename = "Meteostat_and_openweathermap_plots_only.html"
-    with open(filename, "w") as f:
-        f.write(html_output)
-
-    # ALSO save just the plots for embedding (only the div and script elements)
-    plots_only = f"""<div class="plots-container">
-    {plot1_html}
-    {plot2_html}
-    </div>
-    """
-    with open(filename, "w") as f:
-        f.write(plots_only)
-
-    # webbrowser.open_new_tab(filename)
-
-    # # output the data from Meteostats data_hourly_Mstat to an excel file including the datetime
-    # df = pd.DataFrame(data_hourly_Mstat)
-    # df = df.reset_index()
-    # df.to_excel(
-    #     "Meteostat_data_since_"
-    #     + str(first_date)
-    #     + "_"
-    #     + str(lat)
-    #     + "_"
-    #     + str(lon)
-    #     + ".xlsx",
-    #     index=False,
-    # )
+    save_plots(fig, fig2)
 
 
 if __name__ == "__main__":

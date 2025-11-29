@@ -49,55 +49,11 @@ def index():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/plots")
-def get_plots():
-    """Serve the static HTML plots file"""
-    logger.info("GET /plots - Fetching static plots")
-    try:
-        plots_file = "Meteostat_and_openweathermap_plots_only.html"
-        full_path = os.path.join(os.getcwd(), plots_file)
-        logger.info(f"Looking for: {full_path}")
-
-        if os.path.exists(plots_file):
-            logger.info(f"Found {plots_file}")
-            with open(plots_file, "r", encoding="utf-8") as f:
-                html_content = f.read()
-            logger.info(f"Loaded {len(html_content)} bytes from {plots_file}")
-            return html_content
-
-        # Try other paths
-        alt_paths = [
-            os.path.join(
-                os.path.dirname(__file__),
-                "Meteostat_and_openweathermap_plots_only.html",
-            ),
-            "/var/www/virtual/zef/html/predictions/Meteostat_and_openweathermap_plots_only.html",
-        ]
-
-        for alt_path in alt_paths:
-            if os.path.exists(alt_path):
-                logger.info(f"Found at alternative path: {alt_path}")
-                with open(alt_path, "r", encoding="utf-8") as f:
-                    html_content = f.read()
-                logger.info(f"Loaded {len(html_content)} bytes from {alt_path}")
-                return html_content
-
-        logger.warning(f"File not found: {plots_file}")
-        available_files = [f for f in os.listdir(".") if f.endswith(".html")]
-        logger.info(f"Available HTML files: {available_files}")
-        return (
-            jsonify(
-                {
-                    "error": f"Plots file not found",
-                    "available": available_files,
-                    "cwd": os.getcwd(),
-                }
-            ),
-            404,
-        )
-    except Exception as e:
-        logger.error(f"Error in get_plots: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+@app.route("/initial-plots")
+def initial_plots():
+    path = os.path.join(os.getcwd(), "Meteostat_and_openweathermap_plots_only.html")
+    print("Serving:", path)
+    return send_file(path)
 
 
 @app.route("/predict", methods=["POST"])
