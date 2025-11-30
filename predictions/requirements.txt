@@ -1,6 +1,7 @@
 Flask==3.0.0
 flask-cors==4.0.0
 Werkzeug==3.0.6
+gunicorn==21.2.0
 
 # Weather script dependencies
 pandas
