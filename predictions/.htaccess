@@ -1,28 +1,8 @@
-<IfModule mod_cgi.c>
-    AddHandler cgi-script .cgi
-    
-    # Direct all requests to app.cgi
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
-        RewriteBase /predictions/
-        
-        # Don't rewrite static files
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteCond %{REQUEST_FILENAME} !\.cgi$
-        
-        # Rewrite to app.cgi
-        RewriteRule ^(.*)$ app.cgi/$1 [QSA,L]
-    </IfModule>
-</IfModule>
+Options +ExecCGI
+AddHandler wsgi-script .wsgi
 
-<IfModule !mod_cgi.c>
-    # Fallback if CGI is not available
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
-        RewriteBase /predictions/
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteRule ^(.*)$ index.html [QSA,L]
-    </IfModule>
-</IfModule>
+RewriteEngine On
+RewriteBase /predictions/
+
+# Send everything to the WSGI app
+RewriteRule ^(.*)$ predictions.wsgi [QSA,PT,L]

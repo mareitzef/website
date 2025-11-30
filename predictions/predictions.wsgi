@@ -1,13 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 import sys
 import os
 
-# Add the application directory to the sys.path
-app_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, app_dir)
+# Path to project directory
+project_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_dir)
 
+# Activate venv
+activate_this = "/home/zef/html/predictions/venv/bin/activate_this.py"
+exec(open(activate_this).read(), {"__file__": activate_this})
+
+# Import Flask app
 from app import app as application
-
-if __name__ == "__main__":
-    application.run()
