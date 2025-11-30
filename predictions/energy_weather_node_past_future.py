@@ -344,12 +344,12 @@ def main():
             [{"secondary_y": True}],
         ],
     )
-    # fig.add_trace(go.Scatter(x=data_hourly_Mstat.index, y=data_hourly_Mstat['dwpt'], name='Hourly Dewpoint Temperature', opacity=0.9, marker=dict(color='orange')), row=1, col=1)
+    # fig.add_trace(go.Scatter(x=data_hourly_Mstat.index, y=data_hourly_Mstat['dwpt'], name='Dewpoint Temperature', opacity=0.9, marker=dict(color='orange')), row=1, col=1)
     fig.add_trace(
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["temp"],
-            name="Hourly Temperature",
+            name="Temperature",
             marker=dict(color="red"),
         ),
         row=1,
@@ -359,7 +359,7 @@ def main():
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["rhum"],
-            name="Hourly Humidity",
+            name="Humidity",
             line=dict(width=1, dash="dot"),
             marker=dict(color="grey"),
         ),
@@ -374,7 +374,7 @@ def main():
         go.Bar(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["prcp"],
-            name="Hourly Precipitation",
+            name="Precipitation",
             marker=dict(color="blue"),
         ),
         row=2,
@@ -416,7 +416,7 @@ def main():
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["wspd"],
-            name="Wind @hubheight",
+            name="Wind again",
             line=dict(width=1.2, dash="dot"),
             marker=dict(color="red"),
         ),
@@ -435,9 +435,7 @@ def main():
         col=1,
         secondary_y=True,
     )
-    fig.update_yaxes(
-        title_text="Wind @hubheight (km/h)", row=3, col=1, secondary_y=False
-    )
+    fig.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
     fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
     fig.update_layout(
         title=f"Historic Data - Meteostat - {location} - {lat} N° {lon} E° ", height=600
@@ -493,7 +491,7 @@ def main():
         go.Bar(
             x=timestamps,
             y=rains,
-            name="3-Hourly Precipitation",
+            name="3-Precipitation",
             opacity=0.7,
             marker=dict(color="blue"),
         ),
@@ -573,7 +571,7 @@ def main():
         secondary_y=True,
     )
     fig2.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
-    fig2.update_yaxes(title_text="Power (kW)", row=3, col=1, secondary_y=True)
+    fig2.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
     fig2.update_layout(
         plot_bgcolor="black",
         paper_bgcolor="black",
