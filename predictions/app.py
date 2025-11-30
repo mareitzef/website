@@ -26,6 +26,17 @@ if sys.version_info < (3, 7):
     print("Running on Python 3.6 - some features may be limited")
 
 
+@app.route("/test-static")
+def test_static():
+    import os
+
+    static_dir = os.path.join(BASE_DIR, "static")
+    files = os.listdir(static_dir) if os.path.exists(static_dir) else []
+    return jsonify(
+        {"static_dir": static_dir, "exists": os.path.exists(static_dir), "files": files}
+    )
+
+
 @app.route("/")
 @app.route("/predictions/")
 def index():
