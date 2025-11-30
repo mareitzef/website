@@ -1,11 +1,9 @@
-Options +ExecCGI
-AddHandler wsgi-script .wsgi
-
 RewriteEngine On
 RewriteBase /predictions/
 
-# Do NOT send static files through WSGI
-RewriteCond %{REQUEST_URI} !^/predictions/static/
+# Serve static files directly
+RewriteCond %{REQUEST_URI} ^/predictions/static/
+RewriteRule ^ - [L]
 
-# Send everything else to WSGI
-RewriteRule ^(.*)$ predictions.wsgi [QSA,PT,L]
+# Proxy all other requests to Gunicorn backend
+RewriteRule ^(.*)$ http://127.0.0.1:5001/$1 [P,NE,L]
