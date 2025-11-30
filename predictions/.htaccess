@@ -1,3 +1,8 @@
+# Check if .htaccess exists
+ls -la ~/html/predictions/.htaccess
+
+# If it doesn't exist, create it
+cat > ~/html/predictions/.htaccess << 'EOF'
 RewriteEngine On
 RewriteBase /predictions/
 
@@ -7,3 +12,4 @@ RewriteRule ^ - [L]
 
 # Proxy all other requests to Gunicorn backend
 RewriteRule ^(.*)$ http://127.0.0.1:5001/$1 [P,NE,L]
+EOF
