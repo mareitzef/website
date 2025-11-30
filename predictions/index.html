@@ -238,7 +238,7 @@
             const lon = document.getElementById('longitude').value;
             const date = document.getElementById('start_date').value;
 
-            if (loc) formData.location = parseFloat(loc);
+            if (loc) formData.location = loc;
             if (lat) formData.latitude = parseFloat(lat);
             if (lon) formData.longitude = parseFloat(lon);
             if (date) formData.start_date = date;

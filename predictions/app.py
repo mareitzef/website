@@ -71,7 +71,7 @@ def predict():
     try:
         # Get form data
         data = request.json
-        location = data.get("location_name", "KYOLO")
+        location = data.get("location", "KYOLO")
         latitude = data.get("latitude", "47.9161926")
         longitude = data.get("longitude", "7.70911552")
         start_date = data.get("start_date", "")
