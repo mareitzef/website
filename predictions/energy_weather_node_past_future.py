@@ -230,10 +230,10 @@ def main():
         )
         # lat with CCC coordinates as default value
         parser.add_argument(
-            "-lat", "--latitude", help="Latitude of location", default="47.99305"
+            "-lat", "--latitude", help="Latitude of location", default="47.993794"
         )
         parser.add_argument(
-            "-lon", "--longitude", help="Longitude of location", default="7.84068"
+            "-lon", "--longitude", help="Longitude of location", default="7.840820"
         )
         parser.add_argument(
             "-f",
@@ -269,8 +269,8 @@ def main():
     else:
         # use these coordinates
         location = "KYOLO"  # 47.91619260655593, 7.709115528489728
-        lat = "47.9161926"
-        lon = "7.70911552"
+        lat = "47.993794"
+        lon = "7.840820"
 
         api_key = "6545b0638b99383c1a278d3962506f4b"
         first_date = datetime.strptime("2025-11-11", "%Y-%m-%d")
@@ -416,7 +416,7 @@ def main():
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["wspd"],
-            name="Mstat",
+            name="Wind @hubheight",
             line=dict(width=1.2, dash="dot"),
             marker=dict(color="red"),
         ),
@@ -436,9 +436,9 @@ def main():
         secondary_y=True,
     )
     fig.update_yaxes(
-        title_text="Wind hubheight (km/h)", row=3, col=1, secondary_y=False
+        title_text="Wind @hubheight (km/h)", row=3, col=1, secondary_y=False
     )
-    fig.update_yaxes(title_text="Power (kW)", row=3, col=1, secondary_y=True)
+    fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
     fig.update_layout(title="Historic Data - Meteostat - " + location, height=600)
     # put background color to black in terminal style
     fig.update_layout(
