@@ -439,7 +439,9 @@ def main():
         title_text="Wind @hubheight (km/h)", row=3, col=1, secondary_y=False
     )
     fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
-    fig.update_layout(title="Historic Data - Meteostat - " + location, height=600)
+    fig.update_layout(
+        title=f"Historic Data - Meteostat - {location} - {lat} N° {lon} E° ", height=600
+    )
     # put background color to black in terminal style
     fig.update_layout(
         plot_bgcolor="black",
@@ -541,7 +543,9 @@ def main():
             col=1,
         )
         # Update the layout of the figure
-    fig2.update_layout(title="Openweathermap Forecast - " + location, height=600)
+    fig2.update_layout(
+        title=f"Openweathermap Forecast - {location} - {lat} N° {lon} E° ", height=600
+    )
 
     # add third subplot with power forecast and wind speed
     fig2.add_trace(
