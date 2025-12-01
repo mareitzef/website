@@ -751,8 +751,17 @@ def create_merged_plot(
         if row == 1:
             fig.add_annotation(
                 x=transition_time,
-                y=-0.1,
+                y=-0.14,
                 text="NOW",
+                showarrow=False,
+                font=dict(color="red", size=12, family="Arial Black"),
+                xref="x",
+                yref="y domain",
+            )
+            fig.add_annotation(
+                x=transition_time,
+                y=-1.31,
+                text="WOW",
                 showarrow=False,
                 font=dict(color="red", size=12, family="Arial Black"),
                 xref="x",
