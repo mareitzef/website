@@ -6,3 +6,4 @@ __pycache__/
 *test.html
 predictions/.env
 predictions/Meteostat_and_openweathermap_plots_only.html
+predictions/.cache.sqlite

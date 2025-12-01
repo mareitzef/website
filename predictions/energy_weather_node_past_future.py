@@ -785,20 +785,17 @@ def create_merged_plot(
 def main():
     # Settings
     today = datetime.today()
-    days_into_past = 2
+    days_into_past = 1
     days_into_future = 2
     first_date_default = (datetime.today() - timedelta(days=days_into_past)).strftime(
         "%Y-%m-%d"
     )
-    end_date_default = (
-        datetime.today().date() + timedelta(days=days_into_future)
-    ).strftime("%Y-%m-%d")
     api_key = os.getenv("API_KEY")
 
     # Parse command line arguments
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser(
-            description="Get weather forecast from OpenWeatherMap API"
+            description="Get weather forecast from OpenWeatherMap and ICON and historical data from Meteostat",
         )
         parser.add_argument(
             "-l", "--location", help="Name of your location", default="KYOLO"
@@ -813,30 +810,15 @@ def main():
             "-f",
             "--first_date",
             help="Set first day to plot past weather (YYYY-MM-DD)",
-            default=None,
-        )
-        parser.add_argument(
-            "-e",
-            "--end_date",
-            help="End date to plot (YYYY-MM-DD)",
-            default=None,
+            default=first_date_default,
         )
 
         args = parser.parse_args()
         location = args.location
         lat = args.latitude
         lon = args.longitude
-
-        # Use provided dates or calculate from defaults
-        if args.first_date:
-            first_date_dt = datetime.strptime(args.first_date, "%Y-%m-%d")
-        else:
-            first_date_dt = datetime.today() - timedelta(days=days_into_past)
-
-        if args.end_date:
-            end_date_dt = datetime.strptime(args.end_date, "%Y-%m-%d").date()
-        else:
-            end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
+        first_date_dt = datetime.strptime(args.first_date, "%Y-%m-%d")
+        end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
 
     else:
         # No command line arguments - use defaults
