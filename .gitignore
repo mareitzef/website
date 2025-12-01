@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 *test.html
 predictions/Meteostat_and_openweathermap_plots_only.html
+predictions/PV_prediction.py
+predictions/.env

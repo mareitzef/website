@@ -11,6 +11,12 @@ requests
 windpowerlib
 jinja2
 numpy
+pandas
+pvlib
+openmeteo-requests
+requests-cache
+retry-requests
+python-dotenv
 
 # Compatibility for old OpenSSL
 urllib3<2

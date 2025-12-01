@@ -1,74 +1,59 @@
 # Import Meteostat library and dependencies
-# https://github.com/meteostat/meteostat-python
-# https://openweathermap.org/api/one-call-3#how
-# pip install plotly
-# pip install meteostat
-# pip install requests
-# pip install windpowerlib
-
 import pandas as pd
 from meteostat import Point, Daily, Hourly, Stations
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-import plotly.graph_objs as go
-from plotly.offline import plot
 import requests
 import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
 import webbrowser
 import argparse
 import sys
-import pandas as pd
 import numpy as np
-from meteostat import Stations, Hourly, Point
-
-# import cdsapi
-from plotly import tools
 from windpowerlib import ModelChain, WindTurbine, create_power_curve
 from windpowerlib import data as wt
 import logging
-from jinja2 import Environment, FileSystemLoader
+import pvlib
+from pvlib.pvsystem import PVSystem
+import openmeteo_requests
+import requests_cache
+from retry_requests import retry
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
+
 
 logging.getLogger().setLevel(logging.DEBUG)
 
-# load a libary for ascii art
-# from pyfiglet import Figlet
 
-
-def save_plots(fig1, fig2):
-    plot2_html = fig2.to_html(full_html=False, include_plotlyjs=False, div_id="plot2")
-    plot1_html = fig1.to_html(full_html=False, include_plotlyjs=False, div_id="plot1")
-    plots_only = f"""<div class="plots-container">
-    {plot2_html}
-    {plot1_html}
+def save_plots(merged_fig):
+    plot_html = merged_fig.to_html(
+        full_html=False, include_plotlyjs=False, div_id="merged_plot"
+    )
+    plots_container = f"""<div class="plots-container">
+    {plot_html}
 </div>"""
+
     filename = "Meteostat_and_openweathermap_plots_only.html"
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(plots_only)
-    print(f"Saved plots to {filename}")
+        f.write(plots_container)
+    print(f"Saved merged plot to {filename}")
 
 
-def get_meteostat_data(lat, lon, first_date, today):
-    """
-    Fetch hourly weather data from the closest Meteostat weather station.
-
-    Args:
-        lat (float): The latitude of the location.
-        lon (float): The longitude of the location.
-        first_date (datetime): The start date of the period to fetch.
-        today (datetime): The end date of the period to fetch.
-
-    Returns:
-        A pandas DataFrame containing the hourly weather data.
-    """
+def get_meteostat_data(lat, lon, first_date_dt):
     stations = Stations().nearby(float(lat), float(lon))
     station = stations.fetch(1)
 
     point = Point(station["latitude"], station["longitude"], station["elevation"][0])
-    data_hourly_Mstat = Hourly(point, first_date, today).fetch()
 
-    return data_hourly_Mstat
+    # Meteostat expects naive UTC → create that
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    data_hourly = Hourly(point, first_date_dt, now_utc).fetch()
+    return data_hourly
 
 
 def get_forecast_data(lat, lon, api_key):
@@ -79,10 +64,9 @@ def get_forecast_data(lat, lon, api_key):
 
     # Check if request was successful
     if response.status_code == 200:
-        # Parse JSON response
         data_OWM = response.json()
 
-        # Extract temperature and wind speed data
+        # Extract data
         temps = []
         humiditys = []
         wind_speeds = []
@@ -96,7 +80,6 @@ def get_forecast_data(lat, lon, api_key):
             wind_speed = data_OWM["list"][i]["wind"]["speed"] * 3.6  # convert to km/h
             timestamp = data_OWM["list"][i]["dt_txt"]
             rain_probab = data_OWM["list"][i]["pop"] * 100  # convert to %
-            # get pressure forecast data
             pressure = data_OWM["list"][i]["main"]["pressure"]
 
             try:
@@ -119,20 +102,16 @@ def get_forecast_data(lat, lon, api_key):
 
 
 def power_forecast(df_weather, hubheight, max_power, scale_turbine_to, turb_type):
-    # specification of wind turbine where power curve is provided in the
-    # oedb turbine library
-
+    # specification of wind turbine
     windpowerlib_turbine = {
         "nominal_power": max_power * 1000,  # in W
-        "turbine_type": turb_type,  # turbine type as in oedb turbine library
+        "turbine_type": turb_type,
         "hub_height": hubheight,  # in m
     }
     # initialize WindTurbine object
     wpl_turbine = WindTurbine(**windpowerlib_turbine)
 
-    # create_power_curve(wind_speed=x_values, power=y_values*1000
-    #  )
-    # to the given value
+    # scale turbine to the given value
     if scale_turbine_to is not None:
         wpl_turbine.power_curve["value"] = (
             wpl_turbine.power_curve["value"]
@@ -143,24 +122,17 @@ def power_forecast(df_weather, hubheight, max_power, scale_turbine_to, turb_type
 
     # own specifications for ModelChain setup
     modelchain_data = {
-        "wind_speed_model": "logarithmic",  # 'logarithmic' (default),
-        # 'hellman' or
-        # 'interpolation_extrapolation'
-        "density_model": "barometric",  # 'barometric' (default), 'ideal_gas'
-        #  or 'interpolation_extrapolation'
-        "temperature_model": "linear_gradient",  # 'linear_gradient' (def.) or
-        # 'interpolation_extrapolation'
-        "power_output_model": "power_curve",  # 'power_curve' (default) or
-        # 'power_coefficient_curve'
-        "density_correction": False,  # False (default) or True
-        "obstacle_height": 0,  # default: 0
+        "wind_speed_model": "logarithmic",
+        "density_model": "barometric",
+        "temperature_model": "linear_gradient",
+        "power_output_model": "power_curve",
+        "density_correction": False,
+        "obstacle_height": 0,
         "hellman_exp": None,
-    }  # None (default) or None
+    }
 
-    # initialize ModelChain with own specifications and use run_model method to
-    # calculate power output
+    # initialize ModelChain and calculate power output
     mc_wpl_turbine = ModelChain(wpl_turbine, **modelchain_data).run_model(df_weather)
-    # write power output time series to WindTurbine object
     wpl_turbine.power_output = mc_wpl_turbine.power_output
 
     return wpl_turbine
@@ -170,7 +142,6 @@ def create_df_weather(dates, wind_10m, temp2m, surf_pres, roughnesslength):
     # create a dictionary with the variables
     data_dict = {
         "wind_speed_10m": wind_10m,
-        #'wind_speed_100m': wind_speed_100m.flatten(),
         "fsr": np.ones(len(wind_10m)) * roughnesslength,
         "t2m": temp2m,
         "sp": surf_pres,
@@ -181,7 +152,6 @@ def create_df_weather(dates, wind_10m, temp2m, surf_pres, roughnesslength):
     # create the MultiIndex columns
     col_dict = {
         ("wind_speed", 10): ("wind_speed_10m", "wind_speed"),
-        # ('wind_speed', 100): ('wind_speed_100m', 'wind_speed'),
         ("roughness_length", 0): ("fsr", "roughness_length"),
         ("temperature", 2): ("t2m", "2mtemperature"),
         ("pressure", 0): ("sp", "pressure"),
@@ -197,142 +167,375 @@ def create_df_weather(dates, wind_10m, temp2m, surf_pres, roughnesslength):
     return df_weather
 
 
-def main():
-    ####################### Main Function - Settings: #####################################
+def process_pv_weather_data(
+    df_weather, latitude, longitude, tilt, azimuth, system_size
+):
+    """Process weather data for PV power calculation"""
+    # Convert time column to datetime format and ensure timezone awareness
+    df_weather["datetime"] = pd.to_datetime(df_weather["datetime"], utc=True)
 
-    # set the start and end date of the time series
-    today = datetime.today()
+    # Set location parameters
+    location = pvlib.location.Location(latitude=latitude, longitude=longitude)
 
-    # start date is one week before today
-    nr_days = 7
-    first_date = datetime.today() - timedelta(days=nr_days)
-    # convert to string for default
-    first_date_default = first_date.strftime("%Y-%m-%d")
-    # OpenWeatherMap API key
-    api_key = "6545b0638b99383c1a278d3962506f4b"
+    # Solar position
+    solpos = location.get_solarposition(df_weather["datetime"])
+    solpos = solpos.set_index(df_weather.index)
 
-    # check if there are arguments
-    if len(sys.argv) > 1:
-        # create an ArgumentParser object
-        parser = argparse.ArgumentParser(
-            description="Get weather forecast from OpenWeatherMap API"
-        )
+    # Filter daylight hours
+    df_daylight = df_weather[df_weather["ghi"] > 10].copy()
+    solpos_daylight = solpos.loc[df_daylight.index]
 
-        # add arguments to the parser
-        parser.add_argument(
-            "-a",
-            "--api_key",
-            help="OpenWeatherMap API key",
-            default="6545b0638b99383c1a278d3962506f4b",
-        )
-        parser.add_argument(
-            "-l", "--location", help="Name of your location", default="KYOLO"
-        )
-        # lat with CCC coordinates as default value
-        parser.add_argument(
-            "-lat", "--latitude", help="Latitude of location", default="47.993794"
-        )
-        parser.add_argument(
-            "-lon", "--longitude", help="Longitude of location", default="7.840820"
-        )
-        parser.add_argument(
-            "-f",
-            "--first_date",
-            help="Set first day to plot past weather",
-            default=first_date_default,
-        )
+    # Calculate total irradiance
+    total_irradiance_daylight = pvlib.irradiance.get_total_irradiance(
+        surface_tilt=tilt,
+        surface_azimuth=azimuth,
+        dni=df_daylight["dni"],
+        ghi=df_daylight["ghi"],
+        dhi=df_daylight["dhi"],
+        solar_zenith=solpos_daylight["apparent_zenith"],
+        solar_azimuth=solpos_daylight["azimuth"],
+    )
 
-        # add input variable number_of_days to parser
-        parser.add_argument(
-            "-n",
-            "--number_of_days",
-            help="Number of days into the  past to plot",
-            default=nr_days,
+    poa_irradiance_daylight = total_irradiance_daylight["poa_global"]
+
+    # Calculate module temperature
+    thermal_params = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS["sapm"][
+        "open_rack_glass_glass"
+    ]
+    temp_module_daylight = pvlib.temperature.sapm_cell(
+        poa_global=poa_irradiance_daylight,
+        temp_air=df_daylight["temp_air"],
+        wind_speed=df_daylight["wind_speed"],
+        **thermal_params,
+    )
+
+    # Define PV system parameters
+    module_parameters = {
+        "pdc0": system_size,
+        "gamma_pdc": -0.004,
+    }
+    inverter_parameters = {
+        "pdc0": system_size,
+        "eta_inv_nom": 0.96,
+    }
+
+    # Create PVSystem object
+    pv_system = pvlib.pvsystem.PVSystem(
+        surface_tilt=tilt,
+        surface_azimuth=azimuth,
+        module_parameters=module_parameters,
+        inverter_parameters=inverter_parameters,
+    )
+
+    # Calculate DC power output
+    dc_power_daylight = pv_system.pvwatts_dc(
+        g_poa_effective=poa_irradiance_daylight, temp_cell=temp_module_daylight
+    )
+
+    # Apply inverter efficiency
+    inverter_efficiency = 0.96
+    ac_power_daylight = dc_power_daylight * inverter_efficiency
+
+    # Add AC power to DataFrame
+    df_weather["AC Power (kW)"] = np.nan
+    df_weather.loc[df_daylight.index, "AC Power (kW)"] = ac_power_daylight / 1000
+    df_weather.fillna(0, inplace=True)
+
+    return df_weather
+
+
+def get_pv_data_from_openmeteo(lat, lon, start_date, end_date):
+    """Fetch PV-relevant data from Open-Meteo"""
+    cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
+    retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+    openmeteo = openmeteo_requests.Client(session=retry_session)
+
+    # Fetch historical data
+    archive_url = "https://archive-api.open-meteo.com/v1/archive"
+    archive_params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "end_date": end_date.strftime("%Y-%m-%d"),
+        "hourly": [
+            "temperature_2m",
+            "wind_speed_10m",
+            "shortwave_radiation",
+            "diffuse_radiation",
+            "direct_normal_irradiance",
+        ],
+        "wind_speed_unit": "ms",
+    }
+    archive_responses = openmeteo.weather_api(archive_url, params=archive_params)
+    archive_response = archive_responses[0]
+    archive_hourly = archive_response.Hourly()
+
+    # Convert to DataFrame
+    archive_hourly_data = {
+        "datetime": pd.date_range(
+            start=pd.to_datetime(archive_hourly.Time(), unit="s", utc=True),
+            end=pd.to_datetime(archive_hourly.TimeEnd(), unit="s", utc=True),
+            freq=pd.Timedelta(seconds=archive_hourly.Interval()),
+            inclusive="left",
+        ),
+        "temp_air": archive_hourly.Variables(0).ValuesAsNumpy(),
+        "wind_speed": archive_hourly.Variables(1).ValuesAsNumpy(),
+        "ghi": archive_hourly.Variables(2).ValuesAsNumpy(),
+        "dhi": archive_hourly.Variables(3).ValuesAsNumpy(),
+        "dni": archive_hourly.Variables(4).ValuesAsNumpy(),
+    }
+
+    df_archive = pd.DataFrame(archive_hourly_data)
+    df_archive["datetime"] = pd.to_datetime(df_archive["datetime"], utc=True)
+
+    return df_archive
+
+
+def get_pv_forecast_from_openmeteo(lat, lon):
+    """Fetch PV forecast data from Open-Meteo"""
+    cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
+    retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+    openmeteo = openmeteo_requests.Client(session=retry_session)
+
+    forecast_url = "https://api.open-meteo.com/v1/forecast"
+    forecast_params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": ["temperature_2m", "wind_speed_10m"],
+        "minutely_15": [
+            "shortwave_radiation",
+            "diffuse_radiation",
+            "direct_normal_irradiance",
+        ],
+        "wind_speed_unit": "ms",
+        "models": "icon_seamless",
+    }
+    forecast_responses = openmeteo.weather_api(forecast_url, params=forecast_params)
+    forecast_response = forecast_responses[0]
+    forecast_minutely_15 = forecast_response.Minutely15()
+    forecast_hourly = forecast_response.Hourly()
+
+    # Convert forecast data
+    forecast_minutely_15_data = {
+        "datetime": pd.date_range(
+            start=pd.to_datetime(forecast_minutely_15.Time(), unit="s", utc=True),
+            end=pd.to_datetime(forecast_minutely_15.TimeEnd(), unit="s", utc=True),
+            freq=pd.Timedelta(seconds=forecast_minutely_15.Interval()),
+            inclusive="left",
+        ),
+        "dni": forecast_minutely_15.Variables(0).ValuesAsNumpy(),
+        "ghi": forecast_minutely_15.Variables(1).ValuesAsNumpy(),
+        "dhi": forecast_minutely_15.Variables(2).ValuesAsNumpy(),
+    }
+    forecast_hourly_data = {
+        "datetime": pd.date_range(
+            start=pd.to_datetime(forecast_hourly.Time(), unit="s", utc=True),
+            end=pd.to_datetime(forecast_hourly.TimeEnd(), unit="s", utc=True),
+            freq=pd.Timedelta(seconds=forecast_hourly.Interval()),
+            inclusive="left",
+        ),
+        "temp_air": forecast_hourly.Variables(0).ValuesAsNumpy(),
+        "wind_speed": forecast_hourly.Variables(1).ValuesAsNumpy(),
+    }
+
+    df_forecast_minutely_15 = pd.DataFrame(forecast_minutely_15_data)
+    df_forecast_hourly = pd.DataFrame(forecast_hourly_data)
+
+    # Process forecast data
+    df_forecast_hourly["datetime"] = pd.to_datetime(
+        df_forecast_hourly["datetime"], utc=True
+    )
+    df_forecast_hourly.set_index("datetime", inplace=True)
+    df_forecast_minutely_15["datetime"] = pd.to_datetime(
+        df_forecast_minutely_15["datetime"], utc=True
+    )
+    df_forecast_minutely_15.set_index("datetime", inplace=True)
+
+    # Resample and merge
+    df_forecast_hourly_resampled = df_forecast_hourly.resample("15T").interpolate()
+    df_weather_forecast = df_forecast_minutely_15.merge(
+        df_forecast_hourly_resampled, left_index=True, right_index=True, how="left"
+    )
+    df_weather_forecast.reset_index(inplace=True)
+
+    return df_weather_forecast
+
+
+def filter_forecast_data(
+    temps,
+    humiditys,
+    wind_speeds,
+    timestamps,
+    rain_probabs,
+    rains,
+    pressures,
+    first_date_dt,
+    end_date_dt,
+):
+    """
+    Filter forecast data to fit within the specified date range.
+
+    Args:
+        temps, humiditys, wind_speeds, timestamps, rain_probabs, rains, pressures: Forecast data lists
+        first_date_dt: Start datetime
+        end_date_dt: End date
+
+    Returns:
+        Filtered tuples of all data
+    """
+    if not timestamps:
+        return ([], [], [], [], [], [], [])
+
+    # Convert timestamps to datetime objects for comparison
+    dt_timestamps = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamps]
+
+    # Create end datetime at end of day
+    end_datetime = datetime.combine(end_date_dt, datetime.max.time())
+
+    # Create a list of indices that fall within the date range
+    valid_indices = [
+        i for i, dt in enumerate(dt_timestamps) if first_date_dt <= dt <= end_datetime
+    ]
+
+    # If no valid indices, return empty lists
+    if not valid_indices:
+        print(
+            f"Warning: No forecast data found in range {first_date_dt} to {end_date_dt}"
         )
+        return ([], [], [], [], [], [], [])
 
-        # parse the command-line arguments
-        args = parser.parse_args()
-        location = args.location
-        lat = args.latitude
-        lon = args.longitude
-        api_key = args.api_key
-        if args.first_date:
-            first_date = datetime.strptime(args.first_date, "%Y-%m-%d")
-        # if there is argment in number_of_days, replace first_date with (datetime.today() - timedelta(days=nr_days))
-        if args.number_of_days:
-            nr_days = int(args.number_of_days)
-            first_date = datetime.today() - timedelta(days=nr_days)
-            first_date = datetime.strptime(str(args.first_date), "%Y-%m-%d")
-        else:
-            first_date = first_date_default
+    # Filter all lists using valid indices
+    filtered_temps = [temps[i] for i in valid_indices]
+    filtered_humiditys = [humiditys[i] for i in valid_indices]
+    filtered_wind_speeds = [wind_speeds[i] for i in valid_indices]
+    filtered_timestamps = [timestamps[i] for i in valid_indices]
+    filtered_rain_probabs = [rain_probabs[i] for i in valid_indices]
+    filtered_rains = [rains[i] for i in valid_indices]
+    filtered_pressures = [pressures[i] for i in valid_indices]
 
+    print(
+        f"Filtered forecast data: {len(valid_indices)} records from {filtered_timestamps[0]} to {filtered_timestamps[-1]}"
+    )
+
+    return (
+        filtered_temps,
+        filtered_humiditys,
+        filtered_wind_speeds,
+        filtered_timestamps,
+        filtered_rain_probabs,
+        filtered_rains,
+        filtered_pressures,
+    )
+
+
+def create_continuous_timeline(first_date_dt, end_date_dt, freq="H"):
+    """
+    Create a continuous timeline DataFrame from start to end date.
+
+    Args:
+        first_date_dt: Start datetime
+        end_date_dt: End date
+        freq: Frequency ('H' for hourly)
+
+    Returns:
+        DataFrame with continuous datetime index
+    """
+    end_datetime = datetime.combine(end_date_dt, datetime.max.time())
+    timeline = pd.date_range(start=first_date_dt, end=end_datetime, freq=freq)
+    df = pd.DataFrame(index=timeline)
+    return df
+
+
+def merge_and_calculate_power(
+    data_hourly_Mstat,
+    forecast_data,
+    hubheight,
+    max_power,
+    scale_turbine_to,
+    turb_type,
+    roughnesslength,
+):
+    """
+    Merge historical and forecast data, then calculate wind power for the combined dataset.
+    """
+    temps, humiditys, wind_speeds, timestamps, rain_probabs, rains, pressures = (
+        forecast_data
+    )
+
+    # Calculate wind power for past (only if data exists)
+    if not data_hourly_Mstat.empty and "wspd" in data_hourly_Mstat.columns:
+        dates_past = data_hourly_Mstat.index
+        wind_10m_past = data_hourly_Mstat["wspd"].values / 3.6
+        temp2m_past = data_hourly_Mstat["temp"].values
+        surf_pres_past = data_hourly_Mstat["pres"].values
+
+        df_weather_past = create_df_weather(
+            dates_past, wind_10m_past, temp2m_past, surf_pres_past, roughnesslength
+        )
+        power_turbine_past = power_forecast(
+            df_weather_past, hubheight, max_power, scale_turbine_to, turb_type
+        )
+        data_hourly_Mstat["power"] = power_turbine_past.power_output.values / 1000
     else:
-        # use these coordinates
-        location = "KYOLO"  # 47.91619260655593, 7.709115528489728
-        lat = "47.993794"
-        lon = "7.840820"
+        print("No historical data available for wind power calculation")
 
-        api_key = "6545b0638b99383c1a278d3962506f4b"
-        first_date = datetime.strptime("2025-11-11", "%Y-%m-%d")
+    # Calculate wind power for future (only if data exists)
+    if timestamps and len(timestamps) > 0:
+        dates_future = timestamps
+        wind_10m_future = [s / 3.6 for s in wind_speeds]
+        temp2m_future = temps
+        surf_pres_future = pressures
 
-    # get weather data from OpenWeatherMap API
-    (
-        temps,
-        humiditys,
-        wind_speeds,
-        timestamps,
-        rain_probabs,
-        rains,
-        pressures,
-    ) = get_forecast_data(lat, lon, api_key)
-    # get weather data from Meteostat API
-    data_hourly_Mstat = get_meteostat_data(lat, lon, first_date, today)
+        df_weather_future = create_df_weather(
+            dates_future,
+            wind_10m_future,
+            temp2m_future,
+            surf_pres_future,
+            roughnesslength,
+        )
+        power_turbine_future = power_forecast(
+            df_weather_future, hubheight, max_power, scale_turbine_to, turb_type
+        )
+        power_future_plt = power_turbine_future.power_output / 1000
+    else:
+        print("No forecast data available for wind power calculation")
+        power_future_plt = pd.Series()
 
-    # define settings for the WindTurbine calculation
-    hubheight = 63
-    turb_type = "E48/800"  # if there is no type, use the scale_turbine_to parameter to scale the turbine to a specific power
-    max_power = 600
-    scale_turbine_to = 530
-    roughnesslength = 0.84
+    return data_hourly_Mstat, power_future_plt
 
-    # get power output for the past
-    # create a list of dates from data_hourly_Mstat
-    dates = data_hourly_Mstat.index
-    wind_10m = data_hourly_Mstat["wspd"].values / 3.6
-    temp2m = data_hourly_Mstat["temp"].values
-    surf_pres = data_hourly_Mstat["pres"].values
 
-    df_weather_past = create_df_weather(
-        dates, wind_10m, temp2m, surf_pres, roughnesslength
+def create_merged_plot(
+    data_hourly_Mstat,
+    forecast_data,
+    power_future_plt,
+    df_pv_past_processed,
+    df_pv_forecast_processed,
+    location,
+    lat,
+    lon,
+):
+    """
+    Create a single merged plot showing both historical and forecast data
+    with a red dashed line separating past from future.
+    """
+    temps, humiditys, wind_speeds, timestamps, rain_probabs, rains, pressures = (
+        forecast_data
     )
+    data_hourly_Mstat.index = data_hourly_Mstat.index.tz_localize("Europe/Berlin")
+    timestamps = pd.to_datetime(timestamps).tz_localize("Europe/Berlin")
 
-    # Calculate power output for each wind speed
-    power_turbine_past = power_forecast(
-        df_weather_past, hubheight, max_power, scale_turbine_to, turb_type
-    )
-    # power_turbine_kW = power_turbine.power_output/1000
-    data_hourly_Mstat["power"] = power_turbine_past.power_output.values / 1000
+    # Get the transition point (current time or first forecast timestamp)
+    transition_time = datetime.now().astimezone()
+    # remove data from df_pv_forecast_processed which is before transition_time
+    if df_pv_forecast_processed is not None:
+        df_pv_forecast_processed = df_pv_forecast_processed[
+            df_pv_forecast_processed["datetime"] >= transition_time
+        ]
+        # and also for times lager than timestamps max
+        df_pv_forecast_processed = df_pv_forecast_processed[
+            df_pv_forecast_processed["datetime"] <= timestamps[-1]
+        ]
 
-    # get power output for the future
-    dates = timestamps
-    wind_10m = [s / 3.6 for s in wind_speeds]
-    temp2m = temps
-    surf_pres = pressures
-
-    df_weather_future = create_df_weather(
-        dates, wind_10m, temp2m, surf_pres, roughnesslength
-    )
-
-    # Calculate power output for each wind speed
-    power_turbine_future = power_forecast(
-        df_weather_future, hubheight, max_power, scale_turbine_to, turb_type
-    )
-    # power_turbine_kW = power_turbine.power_output/1000
-    power_future_plt = power_turbine_future.power_output / 1000
-
-    ####################### Main Function - Plots: #####################################
-    # Plot hourly data
-    # Create a figure with two subplots
     fig = make_subplots(
         rows=3,
         cols=1,
@@ -344,22 +547,39 @@ def main():
             [{"secondary_y": True}],
         ],
     )
-    # fig.add_trace(go.Scatter(x=data_hourly_Mstat.index, y=data_hourly_Mstat['dwpt'], name='Dewpoint Temperature', opacity=0.9, marker=dict(color='orange')), row=1, col=1)
+
+    # ========== ROW 1: Temperature and Humidity ==========
+    # Past data
     fig.add_trace(
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["temp"],
-            name="Temperature",
-            marker=dict(color="red"),
+            name="Temperature (Past)",
+            marker=dict(color="orange"),
+            line=dict(width=2),
         ),
         row=1,
         col=1,
     )
+    # Future data
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps,
+            y=temps,
+            name="Temperature (Forecast)",
+            marker=dict(color="orange"),
+            line=dict(width=2, dash="dash"),
+        ),
+        row=1,
+        col=1,
+    )
+
+    # Humidity - Past
     fig.add_trace(
         go.Scatter(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["rhum"],
-            name="Humidity",
+            name="Humidity (Past)",
             line=dict(width=1, dash="dot"),
             marker=dict(color="grey"),
         ),
@@ -367,218 +587,428 @@ def main():
         col=1,
         secondary_y=True,
     )
+    # Humidity - Future
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps,
+            y=humiditys,
+            name="Humidity (Forecast)",
+            line=dict(width=1, dash="dot"),
+            marker=dict(color="lightgrey"),
+        ),
+        row=1,
+        col=1,
+        secondary_y=True,
+    )
+
     fig.update_yaxes(title_text="Temperature (°C)", secondary_y=False, row=1, col=1)
     fig.update_yaxes(title_text="Humidity (%)", secondary_y=True, row=1, col=1)
 
+    # ========== ROW 2: Precipitation and Wind ==========
+    # Past precipitation
     fig.add_trace(
         go.Bar(
             x=data_hourly_Mstat.index,
             y=data_hourly_Mstat["prcp"],
-            name="Precipitation",
+            name="Precipitation (Past)",
             marker=dict(color="blue"),
         ),
         row=2,
         col=1,
-        secondary_y=True,
     )
+    # Future precipitation
     fig.add_trace(
-        go.Scatter(
-            x=data_hourly_Mstat.index,
-            y=data_hourly_Mstat["wspd"],
-            name="Wind 10m",
-            opacity=1,
-            line=dict(width=1.2, dash="dot"),
-            marker=dict(color="red"),
-        ),
-        row=2,
-        col=1,
-    )
-    fig.update_yaxes(title_text="Wind (km/h)", row=2, col=1)
-    # if length of data_hourly_Mstat['prcp'] is 0, set range to 0,1
-    if len(data_hourly_Mstat["prcp"]) == 0:
-        fig.update_yaxes(
-            title_text="Precipitation (mm)",
-            secondary_y=True,
-            row=2,
-            col=1,
-            range=[0, 1],
-        )
-    else:
-        fig.update_yaxes(
-            title_text="Precipitation (mm)",
-            secondary_y=True,
-            row=2,
-            col=1,
-            range=[0, max(data_hourly_Mstat["prcp"]) + 1],
-        )
-    # add third subplot
-    fig.add_trace(
-        go.Scatter(
-            x=data_hourly_Mstat.index,
-            y=data_hourly_Mstat["wspd"],
-            name="Wind again",
-            line=dict(width=1.2, dash="dot"),
-            marker=dict(color="red"),
-        ),
-        row=3,
-        col=1,
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=data_hourly_Mstat.index,
-            y=data_hourly_Mstat["power"],
-            name="power",
-            yaxis="y2",
-            marker=dict(color="lightblue"),
-        ),
-        row=3,
-        col=1,
-        secondary_y=True,
-    )
-    fig.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
-    fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
-    fig.update_layout(
-        title=f"Historic Data - Meteostat - {location} - {lat} N° {lon} E° ", height=600
-    )
-    # put background color to black in terminal style
-    fig.update_layout(
-        plot_bgcolor="black",
-        paper_bgcolor="black",
-        font=dict(color="white"),
-    )
-
-    #################### Create seocond plot with forecast data from OpenWeatherMap ############################
-
-    fig2 = make_subplots(
-        rows=3,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.05,
-        specs=[
-            [{"secondary_y": True}],
-            [{"secondary_y": True}],
-            [{"secondary_y": True}],
-        ],
-    )
-    # Add traces for temperature and wind speed to the first subplot
-    fig2.add_trace(
-        go.Scatter(x=timestamps, y=temps, name="Temperature", marker=dict(color="red")),
-        row=1,
-        col=1,
-    )
-    fig2.add_trace(
-        go.Scatter(
-            x=timestamps,
-            y=humiditys,
-            name="Humidity",
-            line=dict(width=1, dash="dot"),
-            marker=dict(color="grey"),
-        ),
-        row=1,
-        col=1,
-        secondary_y=True,
-    )
-    # Set the y-axis titles for the subplots
-    fig2.update_yaxes(title_text="Temperature (°C)", row=1, col=1)
-    fig2.update_yaxes(title_text="Humidity (%)", secondary_y=True, row=1, col=1)
-
-    # for i, p in enumerate(rain_probabs):
-    #     opac = p/100 # update only the first subplot
-    # color='rgba(100,0,255,'+opac+')'
-
-    # Add a trace for precipitation to the second subplot
-    fig2.add_trace(
         go.Bar(
             x=timestamps,
             y=rains,
-            name="3-Precipitation",
+            name="Precipitation (Forecast)",
+            marker=dict(color="cyan"),
             opacity=0.7,
-            marker=dict(color="blue"),
         ),
         row=2,
         col=1,
     )
-    # Add a trace for wind speed to the second subplot
-    fig2.add_trace(
+
+    # Past wind
+    fig.add_trace(
         go.Scatter(
-            x=timestamps,
-            y=wind_speeds,
-            name="Wind 10m",
+            x=data_hourly_Mstat.index,
+            y=data_hourly_Mstat["wspd"],
+            name="Wind 10m (Past)",
             opacity=1,
-            line=dict(width=1.2, dash="dot"),
+            line=dict(width=1.2),
             marker=dict(color="red"),
         ),
         row=2,
         col=1,
         secondary_y=True,
     )
-    # # add trace for power_future_plt to the second subplot
-    # fig2.add_trace(go.Scatter(x=timestamps, y=power_future_plt, name="Power",opacity=1, line=dict(width=1.2, dash='dot'),marker=dict(color='green')), row=2, col=1, secondary_y=True)
-
-    # Set the y-axis titles for the subplots
-    fig2.update_yaxes(
-        title_text="Precipitation (mm/3h)",
+    # Future wind
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps,
+            y=wind_speeds,
+            name="Wind 10m (Forecast)",
+            opacity=1,
+            line=dict(width=1.2, dash="dash"),
+            marker=dict(color="red"),
+        ),
         row=2,
         col=1,
-        range=[0, max(rains) + max(rains) * 0.15],
-    )
-    fig2.update_yaxes(
-        title_text="Wind (km/h)",
         secondary_y=True,
-        row=2,
-        col=1,
-        range=[0, max(wind_speeds) + 1],
     )
-    # add precipitation probability to second subplot as text on top of the bars
+
+    # Add precipitation probability annotations for forecast
+    max_rain = max(
+        max(rains) if rains else 0,
+        max(data_hourly_Mstat["prcp"]) if len(data_hourly_Mstat["prcp"]) > 0 else 0,
+    )
     for i in range(len(rain_probabs)):
-        fig2.add_annotation(
+        fig.add_annotation(
             x=timestamps[i],
-            y=max(rains) + max(rains) * 0.1,
+            y=max_rain + max_rain * 0.1 if max_rain > 0 else 0.5,
             text=str(int(round(rain_probabs[i]))) + "%",
             showarrow=False,
             font=dict(color="grey", size=10),
             row=2,
             col=1,
         )
-        # Update the layout of the figure
-    fig2.update_layout(
-        title=f"Openweathermap Forecast - {location} - {lat} N° {lon} E° ", height=600
-    )
 
-    # add third subplot with power forecast and wind speed
-    fig2.add_trace(
+    fig.update_yaxes(title_text="Precipitation (mm)", row=2, col=1)
+    fig.update_yaxes(title_text="Wind (km/h)", secondary_y=True, row=2, col=1)
+
+    # ========== ROW 3: PV and Wind Power ==========
+    # Past PV Power
+    if df_pv_past_processed is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=df_pv_past_processed["datetime"],
+                y=df_pv_past_processed["AC Power (kW)"],
+                name="PV Power (Past)",
+                marker=dict(color="yellow"),
+                line=dict(width=2),
+            ),
+            row=3,
+            col=1,
+        )
+
+    # Future PV Power
+    if df_pv_forecast_processed is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=df_pv_forecast_processed["datetime"],
+                y=df_pv_forecast_processed["AC Power (kW)"],
+                name="PV Power (Forecast)",
+                marker=dict(color="gold"),
+                line=dict(width=2, dash="dash"),
+            ),
+            row=3,
+            col=1,
+        )
+
+    # Past Wind Power
+    fig.add_trace(
         go.Scatter(
-            x=timestamps,
-            y=wind_speeds,
-            name="Wind 10m",
-            opacity=1,
-            line=dict(width=1.2, dash="dot"),
-            marker=dict(color="red"),
-        ),
-        row=3,
-        col=1,
-    )
-    fig2.add_trace(
-        go.Scatter(
-            x=timestamps,
-            y=power_future_plt,
-            name="Power",
-            opacity=1,
-            marker=dict(color="lightblue"),
+            x=data_hourly_Mstat.index,
+            y=data_hourly_Mstat["power"],
+            name="Wind Power (Past)",
+            marker=dict(color="cyan"),
+            line=dict(width=2),
         ),
         row=3,
         col=1,
         secondary_y=True,
     )
-    fig2.update_yaxes(title_text="Wind (km/h)", row=3, col=1, secondary_y=False)
-    fig2.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
-    fig2.update_layout(
+
+    # Future Wind Power
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps,
+            y=power_future_plt,
+            name="Wind Power (Forecast)",
+            marker=dict(color="cyan"),
+            line=dict(width=2, dash="dash"),
+        ),
+        row=3,
+        col=1,
+        secondary_y=True,
+    )
+
+    fig.update_yaxes(title_text="PV Power (kW)", row=3, col=1, secondary_y=False)
+    fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
+
+    # ========== Add red dashed vertical line separating past and future ==========
+    for row in [1, 2, 3]:
+        fig.add_vline(
+            x=transition_time,
+            line_width=3,
+            line_dash="dash",
+            line_color="red",
+            row=row,
+            col=1,
+        )
+        # Add annotation for the transition line (only on first row)
+        if row == 1:
+            fig.add_annotation(
+                x=transition_time,
+                y=-0.1,
+                text="NOW",
+                showarrow=False,
+                font=dict(color="red", size=12, family="Arial Black"),
+                xref="x",
+                yref="y domain",
+            )
+
+    # Layout settings
+    fig.update_layout(
+        title=f"Weather & Energy Data - {location} - {lat} N° {lon} E°",
+        height=900,
         plot_bgcolor="black",
         paper_bgcolor="black",
         font=dict(color="white"),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="right", x=0.9),
     )
 
-    save_plots(fig, fig2)
+    return fig
+
+
+def main():
+    # Settings
+    today = datetime.today()
+    days_into_past = 2
+    days_into_future = 2
+    first_date_default = (datetime.today() - timedelta(days=days_into_past)).strftime(
+        "%Y-%m-%d"
+    )
+    end_date_default = (
+        datetime.today().date() + timedelta(days=days_into_future)
+    ).strftime("%Y-%m-%d")
+    api_key = os.getenv("API_KEY")
+
+    # Parse command line arguments
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(
+            description="Get weather forecast from OpenWeatherMap API"
+        )
+        parser.add_argument(
+            "-l", "--location", help="Name of your location", default="KYOLO"
+        )
+        parser.add_argument(
+            "-lat", "--latitude", help="Latitude of location", default="47.993794"
+        )
+        parser.add_argument(
+            "-lon", "--longitude", help="Longitude of location", default="7.840820"
+        )
+        parser.add_argument(
+            "-f",
+            "--first_date",
+            help="Set first day to plot past weather (YYYY-MM-DD)",
+            default=None,
+        )
+        parser.add_argument(
+            "-e",
+            "--end_date",
+            help="End date to plot (YYYY-MM-DD)",
+            default=None,
+        )
+
+        args = parser.parse_args()
+        location = args.location
+        lat = args.latitude
+        lon = args.longitude
+
+        # Use provided dates or calculate from defaults
+        if args.first_date:
+            first_date_dt = datetime.strptime(args.first_date, "%Y-%m-%d")
+        else:
+            first_date_dt = datetime.today() - timedelta(days=days_into_past)
+
+        if args.end_date:
+            end_date_dt = datetime.strptime(args.end_date, "%Y-%m-%d").date()
+        else:
+            end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
+
+    else:
+        # No command line arguments - use defaults
+        location = "KYOLO"
+        lat = "47.993794"
+        lon = "7.840820"
+        first_date_dt = datetime.today() - timedelta(days=days_into_past)
+        end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
+
+    print(f"\n{'='*50}")
+    print(
+        f"Date Range: {first_date_dt.strftime('%Y-%m-%d')} to {end_date_dt.strftime('%Y-%m-%d')}"
+    )
+    print(f"Location: {location} ({lat}°N, {lon}°E)")
+    print(f"{'='*50}\n")
+
+    # Get weather data
+    forecast_data = get_forecast_data(lat, lon, api_key)
+
+    # Filter forecast data to fit within the requested date range
+    # This handles both past-only queries and future forecasts
+    forecast_data = filter_forecast_data(*forecast_data, first_date_dt, end_date_dt)
+    # Get historic data from Meteostat
+    # Determine the end point for historical data (either end_date or today, whichever is earlier)
+    historical_end = min(end_date_dt, today.date())
+
+    # Only fetch historical data if the date range includes past dates
+    if first_date_dt.date() <= historical_end:
+        data_hourly_Mstat = get_meteostat_data(
+            lat,
+            lon,
+            first_date_dt,
+        )
+        print(f"Fetched {len(data_hourly_Mstat)} historical records")
+    else:
+        # If querying only future dates, create empty historical dataframe with proper columns
+        data_hourly_Mstat = pd.DataFrame(
+            columns=["temp", "rhum", "wspd", "prcp", "pres", "power"]
+        )
+        print("Note: No historical data requested (start date is in the future)")
+
+    # Wind turbine settings
+    hubheight = 63
+    turb_type = "E48/800"
+    max_power = 600
+    scale_turbine_to = 1000
+    roughnesslength = 0.84
+
+    # Calculate wind power using merged approach
+    data_hourly_Mstat, power_future_plt = merge_and_calculate_power(
+        data_hourly_Mstat,
+        forecast_data,
+        hubheight,
+        max_power,
+        scale_turbine_to,
+        turb_type,
+        roughnesslength,
+    )
+
+    # PV system settings
+    pv_tilt = 30
+    pv_azimuth = 180
+    pv_system_size = 1000  # Watts
+
+    # Get PV data for past (only if historical data exists)
+    if first_date_dt.date() <= historical_end:
+        print("=" * 50)
+        print("STARTING PV HISTORICAL DATA PROCESSING")
+        print("=" * 50)
+        try:
+            print("Fetching PV historical data...")
+            sys.stdout.flush()
+
+            pv_end_date = datetime.combine(historical_end, datetime.max.time())
+
+            df_pv_past = get_pv_data_from_openmeteo(
+                float(lat), float(lon), first_date_dt, pv_end_date
+            )
+
+            print(f"✓ Raw PV past data fetched: {len(df_pv_past)} records")
+
+            df_pv_past_processed = process_pv_weather_data(
+                df_pv_past, float(lat), float(lon), pv_tilt, pv_azimuth, pv_system_size
+            )
+
+            df_pv_past_processed["datetime"] = df_pv_past_processed[
+                "datetime"
+            ].dt.tz_convert("Europe/Berlin")
+
+            # Filter to requested date range
+            df_pv_past_processed = df_pv_past_processed[
+                (
+                    df_pv_past_processed["datetime"]
+                    >= first_date_dt.replace(
+                        tzinfo=df_pv_past_processed["datetime"].iloc[0].tzinfo
+                    )
+                )
+                & (
+                    df_pv_past_processed["datetime"]
+                    <= pv_end_date.replace(
+                        tzinfo=df_pv_past_processed["datetime"].iloc[0].tzinfo
+                    )
+                )
+            ]
+
+            print(f"✓ PV past data filtered: {len(df_pv_past_processed)} records")
+            print(
+                f"✓ Date range: {df_pv_past_processed['datetime'].min()} to {df_pv_past_processed['datetime'].max()}"
+            )
+
+        except Exception as e:
+            print(f"✗ Error processing PV past data: {e}")
+            import traceback
+
+            traceback.print_exc()
+            df_pv_past_processed = None
+    else:
+        print("No PV historical data requested (start date is in the future)")
+        df_pv_past_processed = None
+
+    # Get PV forecast (only if end_date is in the future)
+    if end_date_dt > today.date():
+        print("\n" + "=" * 50)
+        print("STARTING PV FORECAST DATA PROCESSING")
+        print("=" * 50)
+        try:
+            df_pv_forecast = get_pv_forecast_from_openmeteo(float(lat), float(lon))
+
+            df_pv_forecast_processed = process_pv_weather_data(
+                df_pv_forecast,
+                float(lat),
+                float(lon),
+                pv_tilt,
+                pv_azimuth,
+                pv_system_size,
+            )
+
+            df_pv_forecast_processed["datetime"] = df_pv_forecast_processed[
+                "datetime"
+            ].dt.tz_convert("Europe/Berlin")
+
+            # Filter forecast to only show future dates
+            future_start = datetime.combine(today.date(), datetime.min.time()).replace(
+                tzinfo=df_pv_forecast_processed["datetime"].iloc[0].tzinfo
+            )
+            df_pv_forecast_processed = df_pv_forecast_processed[
+                df_pv_forecast_processed["datetime"] >= future_start
+            ]
+
+            print(f"✓ PV forecast filtered: {len(df_pv_forecast_processed)} records")
+
+        except Exception as e:
+            print(f"✗ Error processing PV forecast data: {e}")
+            import traceback
+
+            traceback.print_exc()
+            df_pv_forecast_processed = None
+    else:
+        print("No PV forecast needed (end date is not in the future)")
+        df_pv_forecast_processed = None
+
+    print("\n" + "=" * 50)
+    print("CREATING MERGED PLOT")
+    print("=" * 50)
+    # TODO: merge all the data into one df which has only one timestamp, then plot from that
+    # first create a df with a timestamp with 1h timestep index that covers the whole range
+    # the 3h data can be left an NaN because it should be visible dots in the plots there
+
+    merged_fig = create_merged_plot(
+        data_hourly_Mstat,
+        forecast_data,
+        power_future_plt,
+        df_pv_past_processed,
+        df_pv_forecast_processed,
+        location,
+        lat,
+        lon,
+    )
+
+    save_plots(merged_fig)
+    print("\nPV and Wind power predictions complete!")
 
 
 if __name__ == "__main__":
