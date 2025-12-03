@@ -581,7 +581,7 @@ def create_merged_plot(
             y=data_hourly_Mstat["rhum"],
             name="Humidity (Past)",
             line=dict(width=1, dash="dot"),
-            marker=dict(color="grey"),
+            marker=dict(color="lightgrey"),
         ),
         row=1,
         col=1,
@@ -601,8 +601,23 @@ def create_merged_plot(
         secondary_y=True,
     )
 
-    fig.update_yaxes(title_text="Temperature (°C)", secondary_y=False, row=1, col=1)
-    fig.update_yaxes(title_text="Humidity (%)", secondary_y=True, row=1, col=1)
+    fig.update_yaxes(
+        title_text="Temperature (°C)",
+        secondary_y=False,
+        gridcolor="grey",
+        gridwidth=1,
+        row=1,
+        col=1,
+    )
+    fig.update_yaxes(
+        title_text="Humidity (%)",
+        secondary_y=True,
+        row=1,
+        col=1,
+        gridcolor="grey",
+        gridwidth=1,
+        griddash="dash",
+    )
 
     # ========== ROW 2: Precipitation and Wind ==========
     # Past precipitation
@@ -674,8 +689,31 @@ def create_merged_plot(
             col=1,
         )
 
-    fig.update_yaxes(title_text="Precipitation (mm)", row=2, col=1)
-    fig.update_yaxes(title_text="Wind (km/h)", secondary_y=True, row=2, col=1)
+    fig.update_yaxes(
+        title_text="Precipitation (mm)",
+        gridcolor="grey",
+        gridwidth=1,
+        row=2,
+        col=1,
+    )
+    fig.update_yaxes(
+        title_text="Wind (km/h)",
+        secondary_y=True,
+        row=2,
+        col=1,
+        gridcolor="grey",
+        gridwidth=1,
+        griddash="dash",
+    )
+
+    # Add vertical grid lines to subplot 2
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="grey",
+        gridwidth=1,
+        row=2,
+        col=1,
+    )
 
     # ========== ROW 3: PV and Wind Power ==========
     # Past PV Power
@@ -734,8 +772,23 @@ def create_merged_plot(
         secondary_y=True,
     )
 
-    fig.update_yaxes(title_text="PV Power (kW)", row=3, col=1, secondary_y=False)
-    fig.update_yaxes(title_text="Wind Power (kW)", row=3, col=1, secondary_y=True)
+    fig.update_yaxes(
+        title_text="PV Power (kW)",
+        gridcolor="grey",
+        gridwidth=1,
+        row=3,
+        col=1,
+        secondary_y=False,
+    )
+    fig.update_yaxes(
+        title_text="Wind Power (kW)",
+        row=3,
+        col=1,
+        secondary_y=True,
+        gridcolor="grey",
+        gridwidth=1,
+        griddash="dash",
+    )
 
     # ========== Add red dashed vertical line separating past and future ==========
     for row in [1, 2, 3]:
@@ -747,7 +800,7 @@ def create_merged_plot(
             row=row,
             col=1,
         )
-        # Add annotation for the transition line (only on first row)
+        # Add annotations for the transition line
         if row == 1:
             fig.add_annotation(
                 x=transition_time,
@@ -758,15 +811,48 @@ def create_merged_plot(
                 xref="x",
                 yref="y domain",
             )
+        elif row == 2:
+            # Added annotation for second subplot
             fig.add_annotation(
                 x=transition_time,
-                y=-1.31,
+                y=-0.14,
+                text="NOW",
+                showarrow=False,
+                font=dict(color="red", size=12, family="Arial Black"),
+                xref="x2",
+                yref="y3 domain",
+            )
+        elif row == 3:
+            fig.add_annotation(
+                x=transition_time,
+                y=-0.14,
                 text="WOW",
                 showarrow=False,
                 font=dict(color="red", size=12, family="Arial Black"),
-                xref="x",
-                yref="y domain",
+                xref="x3",
+                yref="y5 domain",
             )
+
+    # Show x-axis on both top and bottom of first subplot
+    fig.update_xaxes(
+        side="top",
+        showticklabels=True,
+        showgrid=True,
+        gridcolor="grey",
+        gridwidth=1,
+        row=1,
+        col=1,
+    )
+
+    # Also show x-axis at bottom of last subplot
+    fig.update_xaxes(
+        showticklabels=True,
+        showgrid=True,
+        gridcolor="grey",
+        gridwidth=1,
+        row=3,
+        col=1,
+    )
 
     # Layout settings
     fig.update_layout(
@@ -812,6 +898,18 @@ def main():
             help="Set first day to plot past weather (YYYY-MM-DD)",
             default=first_date_default,
         )
+        parser.add_argument(
+            "-t",
+            "--turbine_power_kW",
+            help="Set turbine power in kW",
+            default=1000,
+        )
+        parser.add_argument(
+            "-pv",
+            "--PV_power_kWp",
+            help="Set PV system size in kWp",
+            default=1000,
+        )
 
         args = parser.parse_args()
         location = args.location
@@ -819,6 +917,8 @@ def main():
         lon = args.longitude
         first_date_dt = datetime.strptime(args.first_date, "%Y-%m-%d")
         end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
+        wind_turbine_power_kW = int(args.turbine_power_kW)
+        pv_system_size_kWp = int(args.PV_power_kWp)
 
     else:
         # No command line arguments - use defaults
@@ -827,6 +927,8 @@ def main():
         lon = "7.840820"
         first_date_dt = datetime.today() - timedelta(days=days_into_past)
         end_date_dt = datetime.today().date() + timedelta(days=days_into_future)
+        wind_turbine_power_kW = 1000
+        pv_system_size_kWp = 1000
 
     print(f"\n{'='*50}")
     print(
@@ -864,7 +966,7 @@ def main():
     hubheight = 63
     turb_type = "E48/800"
     max_power = 600
-    scale_turbine_to = 1000
+    scale_turbine_to = wind_turbine_power_kW
     roughnesslength = 0.84
 
     # Calculate wind power using merged approach
@@ -881,7 +983,7 @@ def main():
     # PV system settings
     pv_tilt = 30
     pv_azimuth = 180
-    pv_system_size = 1000  # Watts
+    pv_system_size = pv_system_size_kWp * 1000  # Watts
 
     # Get PV data for past (only if historical data exists)
     if first_date_dt.date() <= historical_end:

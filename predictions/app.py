@@ -86,9 +86,11 @@ def predict():
         latitude = data.get("latitude", "47.9161926")
         longitude = data.get("longitude", "7.70911552")
         start_date = data.get("start_date", "")
+        turbine_power_kW = data.get("turbine_power_kW", "1000")
+        pv_power_kWp = data.get("pv_power_kWp", "1000")
 
         logger.info(
-            f"Parameters: loc={location} lat={latitude}, lon={longitude}, date={start_date}"
+            f"Parameters: loc={location} lat={latitude}, lon={longitude}, date={start_date}, turbine_power_kW={turbine_power_kW}, pv_power_kWp={pv_power_kWp}"
         )
 
         # Path to your weather prediction script
@@ -106,12 +108,14 @@ def predict():
 
         if location:
             cmd.extend(["--location", location])
-
         if start_date:
             cmd.extend(["--first_date", start_date])
-
         if latitude and longitude:
             cmd.extend(["--latitude", str(latitude), "--longitude", str(longitude)])
+        if turbine_power_kW:
+            cmd.extend(["--turbine_power_kW", str(turbine_power_kW)])
+        if pv_power_kWp:
+            cmd.extend(["--PV_power_kWp", str(pv_power_kWp)])
 
         logger.info(f"Executing command: {' '.join(cmd)}")
 

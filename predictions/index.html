@@ -42,6 +42,14 @@
             margin-bottom: 15px;
         }
 
+        .form-row2 {
+            display: grid;
+            grid-template-columns: 2fr 2fr auto;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+
         .form-group label {
             display: block;
             margin-bottom: 5px;
@@ -202,19 +210,37 @@
 
         <div id="output"></div>
 
-        <div class="back-link">
-            <a href="/">[← BACK TO MAIN]</a>
-        </div>
 
-        <!-- <div class="button-container" style="text-align: center; margin-top: 20px;">
-            <button onclick="playMusic()">▶ Play Music</button>
-            <button onclick="stopMusic()">■ Stop Music</button>
-        </div>
 
-        <audio id="bg-music" loop>
-            <source src="02-HilightTribe-Tsunami.mp3" type="audio/mpeg">
-            Your browser does not support the audio element.
-        </audio> -->
+        <div class="form-section">
+            <form id="weatherForm">
+                <div class="form-row2">
+                    <div class="form-group">
+                        <label>> PV POWER kW</label>
+                        <input type="text" id="pv_power_kWp" placeholder="Default=1000">
+                    </div>
+                    <div class="form-group">
+                        <label>> WIND POWER kW</label>
+                        <input type="text" id="turbine_power_kW" placeholder="Default=1000">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="/">[← BACK TO MAIN]</a>
+    </div>
+
+    <!-- <div class="button-container" style="text-align: center; margin-top: 20px;">
+        <button onclick="playMusic()">▶ Play Music</button>
+        <button onclick="stopMusic()">■ Stop Music</button>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="02-HilightTribe-Tsunami.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio> -->
     </div>
 
     <script>
@@ -237,11 +263,15 @@
             const lat = document.getElementById('latitude').value;
             const lon = document.getElementById('longitude').value;
             const date = document.getElementById('start_date').value;
+            const pvpower = document.getElementById('pv_power_kWp').value;
+            const windpower = document.getElementById('turbine_power_kW').value;
 
             if (loc) formData.location = loc;
             if (lat) formData.latitude = parseFloat(lat);
             if (lon) formData.longitude = parseFloat(lon);
             if (date) formData.start_date = date;
+            if (pvpower) formData.pv_power_kWp = parseInt(pvpower);
+            if (windpower) formData.turbine_power_kW = parseInt(windpower);
 
             generatePrediction(formData);
         });
