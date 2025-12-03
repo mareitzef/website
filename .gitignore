@@ -7,3 +7,4 @@ __pycache__/
 predictions/.env
 predictions/Meteostat_and_openweathermap_plots_only.html
 predictions/.cache.sqlite
+predictions/Meteostat_and_openweathermap_plots_only.html

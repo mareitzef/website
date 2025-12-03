@@ -773,7 +773,7 @@ def create_merged_plot(
     )
 
     fig.update_yaxes(
-        title_text="PV Power (kW)",
+        title_text="PV Power (kWp)",
         gridcolor="grey",
         gridwidth=1,
         row=3,
