@@ -122,6 +122,23 @@ which python3
 python3 --version
 ```
 
+
+### Install HDF5 from Source (Recommended for Uberspace)
+cd ~
+wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-1.14.3/src/hdf5-1.14.3.tar.gz
+tar xzf hdf5-1.14.3.tar.gz
+cd hdf5-1.14.3
+
+# Configure with your custom paths
+./configure --prefix=$HOME/hdf5 --enable-build-mode=production
+
+make
+make install
+
+# Set environment variables
+export HDF5_DIR=$HOME/hdf5
+export LD_LIBRARY_PATH="$HOME/hdf5/lib:$LD_LIBRARY_PATH"
+
 ---
 
 ## Setup Flask Application
@@ -141,6 +158,20 @@ source venv/bin/activate
 ```bash
 pip install --upgrade pip
 ```
+
+# Install pvlib without its optional dependencies
+  624  pip install pvlib --no-deps
+# Then manually install only the REQUIRED dependencies for pvlib
+  626  pip install numpy pandas pytz requests pvlib-python
+  627  cd ~/html/predictions
+  628  source venv/bin/activate
+# Install h5py using ONLY pre-built wheels (no compilation)
+  630  pip install h5py --only-binary=h5py
+  631  # Then install pvlib
+  632  pip install pvlib
+  633  pip install "scipy>=1.7.2"
+  634  pip check
+
 
 ### 4. Install application dependencies
 ```bash
