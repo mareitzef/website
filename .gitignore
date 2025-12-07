@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .DS_Store
 *test.html
+predictions_org/
 predictions/.env
 predictions/Meteostat_and_openweathermap_plots_only.html
 predictions/.cache.sqlite
